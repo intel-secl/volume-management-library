@@ -2,7 +2,7 @@ package vml
 
 import (
 	"encoding/json"
-	"lib-go-workload-node/pkg/vml/vm"
+	"lib-go-volume-management/pkg/vml/vm"
 )
 /**
  *

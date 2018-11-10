@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"lib-go-workload-node/pkg/vml"
+	"lib-go-volume-management/pkg/vml"
 )
 
 func main() {
