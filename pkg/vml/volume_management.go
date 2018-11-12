@@ -7,6 +7,12 @@ import(
 	"log"
 	"strings"
 	"syscall"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/md5"
+	"encoding/hex"
+	"io/ioutil"
+
 )
 
 
@@ -14,7 +20,6 @@ const (
 	truncate = "truncate"
 	cryptsetup = "cryptsetup"
 	losetup = "losetup"
-	decrypt = "decrypt"
 )
 
 type runCmd struct {
@@ -29,7 +34,6 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 		(deviceMapperLocation == "") || (len(deviceMapperLocation) <= 0) ||
         (keyFile == "") || (len(keyFile) <=0) {
 			log.Fatal("Invalid input parameters")
-			return false
 	}
 
 	// validate the disksize in KB
@@ -52,7 +56,6 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 		cmdOutput = runCommand(truncate, args)
 		if cmdOutput.err != nil {
 			log.Fatal("Error creating a sparse file")
-			return false
 		}
 		formatDevice = true
 	}
@@ -64,7 +67,6 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 	cmdOutput = runCommand(losetup, args)
 		if cmdOutput.err != nil {
 			log.Fatal("Error trying to find a loop device associated with the sparse file")
-			return false
 		}
 		// find the loop device and associate it with the sparse file
 		if (cmdOutput.output == "") || (len(cmdOutput.output) <= 0) {
@@ -75,7 +77,6 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 			cmdOutput = runCommand(losetup, args)
 			if cmdOutput.err != nil {
 				log.Fatal("Error trying to attach the sparse file to the loop device")
-				return false
 			}
 		}
 
@@ -84,7 +85,6 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 	cmdOutput = runCommand(losetup, args)
 		if (cmdOutput.output == "") || (len(cmdOutput.output) <= 0) {
 			log.Fatal("Sparse file is not associated to the loop device correctly")
-			return false
 		} else {
 			var modifiedOutput = strings.Split(cmdOutput.output, ":")
 			deviceLoop = modifiedOutput[0]
@@ -99,7 +99,6 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 		cmdOutput = runCommand(cryptsetup, args)
 		if cmdOutput.err != nil {
 			log.Fatal("Error trying to format the loop device")
-			return false
 		}
 	}
 
@@ -119,7 +118,6 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 			cmdOutput = runCommand(cryptsetup, args)
 			if cmdOutput.err != nil {
 				log.Fatal("Error trying to open the luks volume")
-				return false
 			} else {
 				formatDevice = true
 			}
@@ -130,7 +128,6 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 			cmdOutput = runCommand(cryptsetup, args)
 			if (!strings.Contains(cmdOutput.output, "active")) {
 				log.Fatal("Volume is not active for use")
-				return false
 			}
 		}
 	// 9. format the volume
@@ -141,7 +138,6 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 		cmdOutput = runCommand("mkfs.ext4", args)
 		if cmdOutput.err != nil {
 			log.Fatal("Error trying to format the luks volume")
-			return false
 		}
 	}
 
@@ -151,15 +147,15 @@ func IsVolumeCreated(sparseFilePath string, deviceMapperLocation string, keyFile
 
 func IsVolumeDeleted(deviceMapperLocation string) bool {
 	if (deviceMapperLocation == "") || (len(deviceMapperLocation) <= 0) {
-		return false
+		log.Fatal("Invalid input parameters")
 	}
+
 	log.Println("Deleteing teh dm-crypt volume ", deviceMapperLocation)
 	deleteVolumeCmd := "cryptsetup"
 	args := []string{"luksClose", deviceMapperLocation}
 	var cmdOutput runCmd = runCommand(deleteVolumeCmd, args)
 	if cmdOutput.err != nil {
 		log.Fatal("Error trying to close the device mapper")
-		return false
 	}	
 	return true
 }
@@ -168,12 +164,10 @@ func IsMount(deviceMapper string, mountLocation string) bool{
 	if (deviceMapper == "") || (len(deviceMapper) <= 0) ||
 	(mountLocation == "") || (len(mountLocation) <= 0) {
 		log.Fatal("Invalid input parameters")
-			return false
 	}
 	err := syscall.Mount(deviceMapper, mountLocation, "ext4", 0, "")
 	if  err != nil {
 		log.Fatal("Error while trying to mount %v ", err)
-		return false
 	}
  return true
 }
@@ -181,15 +175,88 @@ func IsMount(deviceMapper string, mountLocation string) bool{
 func IsUnmount(mountLocation string) bool{
 	if (mountLocation == "") || (len(mountLocation) <= 0) {
 		log.Fatal("Invalid input parameters")
-		return false
 	}
 	err := syscall.Unmount(mountLocation, 0)
 	if  err != nil {
 		log.Fatal("Error while trying to unmount %v ", err)
-		return false
 	}
 	
 	return true
+}
+
+func CreateVMManifest(vmId string, hostHardwareUuid string, imageId string, imageEncrypted bool) string {
+
+	if (vmId == "") || (len(vmId) <= 0) ||
+	 (hostHardwareUuid == "") || (len(hostHardwareUuid) <= 0) ||
+	 (imageId == "") || (len(imageId) <= 0) {
+		 log.Fatal("Invalid input parameters")
+	 }
+	
+	manifest, err := GetVMManifest(vmId, hostHardwareUuid, imageId, imageEncrypted)
+	if err != nil {
+		log.Fatal("Error creating a manifest")
+	}
+	return manifest
+}
+
+func IsDecrypt(encImagePath, decPath, keyPath string) bool {
+
+	// input validation
+	if (encImagePath == "") || (len(encImagePath) <= 0) ||
+	 (decPath == "") || (len(decPath) <= 0) ||
+	 (keyPath == "") || (len(keyPath) <= 0) {
+		 log.Fatal("Invalid input parameters")
+	}
+
+	//check if key file exists
+	_, err := os.Stat(keyPath)
+	if(os.IsNotExist(err)) {
+		log.Fatal("Key does not exist in path : ", keyPath)
+	}
+
+	// check if encrypted image file exists
+	_, err = os.Stat(encImagePath)
+	if(os.IsNotExist(err)) {
+		log.Fatal("Image does not exist in path : ", encImagePath)
+	}		
+
+	//read key file
+	key, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		log.Fatal("Error reading the key")
+	}
+
+	// read the encrypted file
+	data, _ := ioutil.ReadFile(encImagePath)
+	plainText := decryptGCM(data, string(key))
+
+	if len(plainText) <= 0 {
+		log.Fatal("Error during decryption of the file")
+	}
+
+	// write the decrypted output to file
+	err = ioutil.WriteFile(decPath, plainText, 0644)
+	if err != nil {
+		log.Fatal("Error during writing to file")
+	}
+	return true
+}
+
+func decryptGCM(data []byte, passphrase string) []byte {
+	block, err := aes.NewCipher([]byte(createHash(passphrase)))
+	if err != nil {
+		panic(err.Error())
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err.Error())
+	}
+	nonce, ciphertext := data[:12], data[12:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	return plaintext
 }
 
 func runCommand(cmd string, args []string) runCmd {
@@ -197,4 +264,10 @@ func runCommand(cmd string, args []string) runCmd {
 	out, err := exec.Command(cmd, args...).Output()
 	cmdOutput := runCmd{output: string(out), err : err}
 	return cmdOutput
+}
+
+func createHash(key string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(key))
+	return hex.EncodeToString(hasher.Sum(nil))
 }

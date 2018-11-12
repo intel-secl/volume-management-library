@@ -5,13 +5,14 @@ import (
 	"log"
 	"io/ioutil"
 	"strings"
+	"strconv"
 	"lib-go-volume-management/pkg/vml"
 )
 
 func main() {
 
 	if (len(os.Args[1:]) < 2) {
-		log.Fatal("Error while executing integration test. Usage :  ./pgmname wnlMethoName inputFile")
+		log.Fatal("Error while executing integration test. Usage :  ./lib-volume-management wnlMethodName inputFile")
 	}
 
 	var methodName string = os.Args[1]
@@ -70,7 +71,7 @@ func main() {
 			log.Fatal("IsUnMount() requires unmount device location")
 		}
 
-		if (vml.IsMount(input[0]) {
+		if (vml.IsUnmount(input[0])) {
 			log.Printf("Device unmounted successfully")
 		} else {
 			log.Printf("Device could not be unmounted")
@@ -79,31 +80,29 @@ func main() {
 	case "IsDecrypt" :
 		log.Printf("Decrypt method called")
 		var input = readFile(inputFileName)
-		if(len(input) < 2) {
-			log.Fatal("IsMount() requires deviceMapper, mountLocation")
+		if(len(input) < 3) {
+			log.Fatal("IsDecrypt requires encImagePath, decPath and keyPath values)")
 		}
 
-		if (vml.IsMount(input[0], input[1])) {
-			log.Printf("Device mounted successfully")
+		if (vml.IsDecrypt(input[0], input[1], input[2])) {
+			log.Printf("File decrypted successfully")
 		} else {
-			log.Printf("Device could not be mounted")
+			log.Printf("File could not be decrypted")
 		}
 
-	case "IsManifestCreated" :
+	case "CreateVMManifest" :
 		log.Printf("Manifest creation method called")
 		var input = readFile(inputFileName)
-		if(len(input) < 2) {
-			log.Fatal("IsMount() requires deviceMapper, mountLocation")
+		if(len(input) < 4) {
+			log.Fatal("CreateVMManifest() requires vmId , hostHardwareUuid , imageId and imageEncrypted ")
 		}
 
-		if (vml.IsMount(input[0], input[1])) {
-			log.Printf("Device mounted successfully")
-		} else {
-			log.Printf("Device could not be mounted")
-		}
+		isEncryptionRequiredValue, _ := strconv.ParseBool(input[3])
+		manifest :=vml.CreateVMManifest(input[0], input[1], input[2], isEncryptionRequiredValue)
+		log.Println(manifest)
 
 	default :
-		log.Printf("Invalid method name mentioned.\nExpected values: IsVolumeCreated, IsVolumeDeleted, IsMount, IsUnmount, IsManifestCreated, IsDecrypt")	
+		log.Printf("Invalid method name mentioned.\nExpected values: IsVolumeCreated, IsVolumeDeleted, IsMount, IsUnmount, CreateVMManifest, IsDecrypt")	
 	}
 }
 
