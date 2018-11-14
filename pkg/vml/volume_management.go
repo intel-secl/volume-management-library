@@ -9,9 +9,8 @@ import(
 	"syscall"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
-	"encoding/hex"
 	"io/ioutil"
+	"encoding/pem"
 
 )
 
@@ -220,15 +219,9 @@ func IsDecrypt(encImagePath, decPath, keyPath string) bool {
 		log.Fatal("Image does not exist in path : ", encImagePath)
 	}		
 
-	//read key file
-	key, err := ioutil.ReadFile(keyPath)
-	if err != nil {
-		log.Fatal("Error reading the key")
-	}
-
 	// read the encrypted file
 	data, _ := ioutil.ReadFile(encImagePath)
-	plainText := decryptGCM(data, string(key))
+	plainText := decryptGCM(data, keyPath)
 
 	if len(plainText) <= 0 {
 		log.Fatal("Error during decryption of the file")
@@ -242,11 +235,18 @@ func IsDecrypt(encImagePath, decPath, keyPath string) bool {
 	return true
 }
 
-func decryptGCM(data []byte, passphrase string) []byte {
-	block, err := aes.NewCipher([]byte(createHash(passphrase)))
+func decryptGCM(data []byte, keyPath string) []byte {
+	//read the key
+	key, err := readKey(keyPath)	
 	if err != nil {
 		panic(err.Error())
 	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		panic(err.Error())
@@ -266,8 +266,11 @@ func runCommand(cmd string, args []string) runCmd {
 	return cmdOutput
 }
 
-func createHash(key string) string {
-	hasher := md5.New()
-	hasher.Write([]byte(key))
-	return hex.EncodeToString(hasher.Sum(nil))
+func readKey(filename string) ([]byte, error) {
+    key, err := ioutil.ReadFile(filename)
+    if err != nil {
+        return key, err
+    }
+    block, _ := pem.Decode(key)
+    return block.Bytes, nil
 }
