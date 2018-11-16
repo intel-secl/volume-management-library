@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 	"lib-go-volume-management/pkg/vml/vm"
 )
+
 /**
  *
  * @author purvades
  */
 
 type vmManifest struct {
-	Manifest vm.Manifest	`json:"vm_manifest"`
+	Manifest vm.Manifest `json:"vm_manifest"`
 }
 
-func GetVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (string,error) {
+func getVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (string, error) {
 	var info vm.Info
 	info.VmID = vmID
 	info.HostHardwareUUID = hostHardwareUUID
@@ -25,21 +26,20 @@ func GetVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEn
 	return serialize(manifest)
 }
 
-func serialize(manifest vmManifest) (string,error) {
+func serialize(manifest vmManifest) (string, error) {
 	bytes, err := json.Marshal(manifest)
 	if err != nil {
 		//fmt.Println("Can't serislize", manifest)
-		return "",err
+		return "", err
 	}
-	return string(bytes),nil
+	return string(bytes), nil
 }
 
-func deserialize(manifestJson string) (vmManifest,error) {
+func deserialize(manifestJSON string) (vmManifest, error) {
 	var vmManifest vmManifest
-	err := json.Unmarshal([]byte(manifestJson), &vmManifest)
+	err := json.Unmarshal([]byte(manifestJSON), &vmManifest)
 	if err != nil {
-		//fmt.Println("Can't deserislize", manifestJson)
-		return vmManifest,err
+		return vmManifest, err
 	}
-	return vmManifest,err
+	return vmManifest, err
 }
