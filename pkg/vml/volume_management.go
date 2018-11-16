@@ -4,12 +4,15 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/pem"
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"syscall"
+	"lib-go-common/pkg/vm"
 )
 
 /*
@@ -227,19 +230,22 @@ Input Parameters:
 	imageId – This is the image ID of the image created by the cloud orchestrator.
 	imageEncrypted – This is a boolean value indicating if the image downloaded on the host by the cloud orchestrator was encrypted.
 */
-func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) string {
-
-	if (vmID == "") || (len(vmID) <= 0) ||
-		(hostHardwareUUID == "") || (len(hostHardwareUUID) <= 0) ||
-		(imageID == "") || (len(imageID) <= 0) {
-		log.Fatal("Invalid input parameters")
-	}
-
-	manifest, err := getVMManifest(vmID, hostHardwareUUID, imageID, imageEncrypted)
+func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (vm.Manifest,error) {
+	err := validate(vmID, hostHardwareUUID, imageID)
 	if err != nil {
-		log.Fatal("Error creating a manifest\n", err)
+		log.Print("Invalid input: \n",err)
+		return vm.Manifest{},err
 	}
-	return manifest
+
+	vmInfo := vm.Info{}
+	vmInfo.VmID = vmID
+	vmInfo.HostHardwareUUID = hostHardwareUUID
+	vmInfo.ImageID = imageID
+
+	manifest := vm.Manifest{}
+	manifest.ImageEncrypted = imageEncrypted
+	manifest.VmInfo = vmInfo
+	return manifest,nil
 }
 
 /*
@@ -323,4 +329,23 @@ func readKey(filename string) ([]byte, error) {
 	}
 	block, _ := pem.Decode(key)
 	return block.Bytes, nil
+}
+
+func isValidUUID(uuid string) bool {
+	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
+	return r.MatchString(uuid)
+}
+
+func validate(vmID string, hostHardwareUUID string, imageID string) error {
+	if !isValidUUID(vmID) {
+		return errors.New("the VM ID provided is invalid")
+	}
+	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$")
+	if !r.MatchString(hostHardwareUUID) {
+		return errors.New("the host hardware UUID provided is invalid")
+	}
+	if !isValidUUID(imageID) {
+		return errors.New("the image ID provided is invalid")
+	}
+	return nil
 }

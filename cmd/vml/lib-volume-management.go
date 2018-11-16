@@ -1,13 +1,18 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"lib-go-common/pkg/vm"
+	"lib-go-volume-management/pkg/vml"
 	"log"
 	"os"
 	"strconv"
-
-	//"gitlab.devtools.intel.com/sst/isecl/lib-go-volume-management/pkg/vml"
-	"lib-go-volume-management/pkg/vml"
 )
+
+type vmManifest struct {
+	Manifest vm.Manifest `json:"vm_manifest"`
+}
 
 func main() {
 
@@ -55,9 +60,24 @@ func main() {
 			log.Fatal("Usage :  ./lib-volume-management CreateVMManifest vmID hostHardwareUUID imageID imageEncrypted")
 		}
 		isEncryptionRequiredValue, _ := strconv.ParseBool(os.Args[5])
-		vml.CreateVMManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequiredValue)
+		createdManifest,err := vml.CreateVMManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequiredValue)
+		var manifest vmManifest
+		manifest.Manifest = createdManifest
+		if err != nil {
+			log.Printf(err.Error())
+		}
+		log.Printf(serialize(manifest))
 
 	default:
 		log.Printf("Invalid method name. \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt")
 	}
+}
+
+func serialize(manifest vmManifest) (string, error) {
+	bytes, err := json.Marshal(manifest)
+	if err != nil {
+		fmt.Println("Can't serislize", err)
+		return "", err
+	}
+	return string(bytes), nil
 }
