@@ -11,21 +11,25 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
-	"syscall"
-	"lib-go-common/pkg/vm"
+
+	"intel/isecl/lib/common/pkg/vm"
+	"golang.org/x/sys/unix"
 )
 
-/*
-CreateVolume is used to create the sparse file if it doesn’t exist, associate the sparse file
-with the image and create the dm-crypt volume for an image or the instance.
-Input Parameters:
-	sparseFilePath – This is the absolute path to the sparse file. All the directories leading up to
-					 the file must be created before running this test.
-	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
-	keyPath – This is the absolute path to the key file.
-	diskSize – This is the size of the sparse file to be created.
-*/
-func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath string, diskSize string) {
+// CreateVolume is used to create the sparse file if it doesn’t exist, associate the sparse file
+// with the image and create the dm-crypt volume for an image or the instance.
+//
+// Input Parameters:
+//
+// 	sparseFilePath – This is the absolute path to the sparse file. All the directories leading up to
+// 					 the file must be created before running this test.
+//
+// 	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
+//
+// 	keyPath – This is the absolute path to the key file.
+//
+// 	diskSize – This is the size of the sparse file to be created.
+func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath string, diskSize string) error{
 	var formatDevice = false
 	var args []string
 	var deviceLoop string
@@ -34,28 +38,28 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 
 	// input validation
 	if len(strings.TrimSpace(sparseFilePath)) <= 0 {
-		log.Fatal("Sparse file path not given")
+		return errors.New("sparse file path not given")
 	}
 	if len(strings.TrimSpace(deviceMapperLocation)) <= 0 {
-		log.Fatal("Device mapper location not given")
+		return errors.New("device mapper location not given")
 	}
 	if len(strings.TrimSpace(keyPath)) <= 0 {
-		log.Fatal("Key path not given")
+		return errors.New("key path not given")
 	}
 	if len(strings.TrimSpace(diskSize)) <= 0 {
-		log.Fatal("Sparse file size not given")
+		return errors.New("sparse file size not given")
 	}
 
 	// check if device mapper of the same name exists in the given location
 	_, err = os.Stat(deviceMapperLocation)
 	if !os.IsExist(err) {
-		log.Fatal("A device mapper of the same already exists\n", err)
+		return errors.New("device mapper of the same already exists\n", err)
 	}
 
 	// check if the key file exists in the location
 	_, err = os.Stat(keyPath)
 	if os.IsNotExist(err) {
-		log.Fatal("Key file does not exist\n", err)
+		return errors.New("key file does not exist\n", err)
 	}
 
 	// get loop device associated to the sparse file and format it
@@ -74,7 +78,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 		args = []string{"-v", "luksOpen", deviceLoop, deviceMapperName, "-d", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
-			log.Fatal("Error trying to open the luks volume\n", err)
+			return errors.New("error trying to open the luks volume\n", err)
 		} else {
 			formatDevice = true
 		}
@@ -84,7 +88,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 		args = []string{"status", deviceMapperLocation}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if !strings.Contains(cmdOutput, "active") {
-			log.Fatal("Volume is not active for use\n", err)
+			return errors.New("volume is not active for use\n", err)
 		}
 	}
 	// 9. format the volume
@@ -93,7 +97,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 		args = []string{"-v", deviceMapperLocation}
 		cmdOutput, err = runCommand("mkfs.ext4", args)
 		if err != nil {
-			log.Fatal("Error trying to format the luks volume\n", err)
+			return errors.New("error trying to format the luks volume\n", err)
 		}
 	}
 }
@@ -115,7 +119,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		args = []string{"-s", diskSize, sparseFilePath}
 		_, err = runCommand("truncate", args)
 		if err != nil {
-			log.Fatal("Error creating a sparse file\n", err)
+			return errors.New("error creating a sparse file\n", err)
 		}
 		formatDevice = true
 	}
@@ -126,7 +130,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err := runCommand("losetup", args)
 	if err != nil {
-		log.Fatal("Error trying to find a loop device associated with the sparse file\n", err)
+		return errors.New("error trying to find a loop device associated with the sparse file\n", err)
 	}
 	// find the loop device and associate it with the sparse file
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
@@ -135,7 +139,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		args = []string{"-f", sparseFilePath}
 		cmdOutput, err = runCommand("losetup", args)
 		if err != nil {
-			log.Fatal("Error trying to accociate a loop device to the sparse file\n", err)
+			return errors.New("error trying to accociate a loop device to the sparse file\n", err)
 		}
 	}
 
@@ -143,7 +147,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err = runCommand("losetup", args)
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
-		log.Fatal("Sparse file is not associated to the loop device\n", err)
+		return errors.New("sparse file is not associated to the loop device\n", err)
 	} else {
 		var modifiedOutput = strings.Split(cmdOutput, ":")
 		deviceLoop = modifiedOutput[0]
@@ -156,21 +160,21 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		args = []string{"-v", "--batch-mode", "luksFormat", deviceLoop, "-d", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
-			log.Fatal("Error trying to format the loop device\n", err)
+			return errors.New("error trying to format the loop device\n", err)
 		}
 	}
 	return deviceLoop
 }
 
-/*
-DeleteVolume method is used to delete the given dm-crypt volume.
-Input Parameter:
-	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
-*/
+// DeleteVolume method is used to delete the given dm-crypt volume.
+//
+// Input Parameter:
+//
+// 	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
 func DeleteVolume(deviceMapperLocation string) {
 	//validate input parameters
 	if len(strings.TrimSpace(deviceMapperLocation)) <= 0 {
-		log.Fatal("Device mapper location not given")
+		return errors.New("device mapper location not given")
 	}
 
 	// build and excute the cryptsetup luksClose command to close and delete the volume
@@ -179,62 +183,66 @@ func DeleteVolume(deviceMapperLocation string) {
 	args := []string{"luksClose", deviceMapperLocation}
 	_, err := runCommand(deleteVolumeCmd, args)
 	if err != nil {
-		log.Fatal("Error trying to close the device mapper\n", err)
+		return errors.New("error trying to close the device mapper\n", err)
 	}
 }
 
-/*
-Mount method is used to attach the filesystem on the device mapper of a specific type at the mount path.
-Input Parameters:
-	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
-	mountLocation – This is the mount point location where the device will be mounted
-*/
+// Mount method is used to attach the filesystem on the device mapper of a specific type at the mount path.
+//
+// Input Parameters:
+//
+// 	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
+//
+// 	mountLocation – This is the mount point location where the device will be mounted
 func Mount(deviceMapperLocation string, mountLocation string) {
 	//input parameters validation
 	if len(strings.TrimSpace(deviceMapperLocation)) <= 0 {
-		log.Fatal("Device mapper location not given")
+		return errors.New("device mapper location not given")
 	}
 	if len(strings.TrimSpace(mountLocation)) <= 0 {
-		log.Fatal("Mount location not given")
+		return errors.New("mount location not given")
 	}
 	// call syscall to mount the file system
-	err := syscall.Mount(deviceMapperLocation, mountLocation, "ext4", 0, "")
+	err := unix.Mount(deviceMapperLocation, mountLocation, "ext4", 0, "")
 	if err != nil {
-		log.Fatal("Error while trying to mount\n", err)
+		return errors.New("error while trying to mount\n", err)
 	}
 }
 
-/*
-Unmount method is used to detach the filesystem from the mount path.
-Input Parameter:
-	mountLocation – This is the mount point location  where we want to unmount the device.
-*/
+// Unmount method is used to detach the filesystem from the mount path.
+//
+// Input Parameter:
+//
+// 	mountLocation – This is the mount point location  where we want to unmount the device.
 func Unmount(mountLocation string) {
 	//input parameters validation
 	if len(strings.TrimSpace(mountLocation)) <= 0 {
-		log.Fatal("Unmount location not given")
+		return errors.New("unmount location not given")
 	}
 
 	// call syscall to unmount the file system from the mount location
-	err := syscall.Unmount(mountLocation, 0)
+	err := unix.Unmount(mountLocation, 0)
 	if err != nil {
-		log.Fatal("Error while trying to unmount\n", err)
+		return errors.New("error while trying to unmount\n", err)
 	}
 }
 
-/*
-CreateVMManifest is used to create a VM manifest and return a manifest.
-Input Parameters:
-	vmId – This is the VM instance UUID.
-	hostHardwareUuid – This is the hardware UUID of the host where the VM will be launched.
-	imageId – This is the image ID of the image created by the cloud orchestrator.
-	imageEncrypted – This is a boolean value indicating if the image downloaded on the host by the cloud orchestrator was encrypted.
-*/
-func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (vm.Manifest,error) {
+// CreateVMManifest is used to create a VM manifest and return a manifest.
+//
+// Input Parameters:
+//
+// 	vmId – This is the VM instance UUID.
+//
+// 	hostHardwareUuid – This is the hardware UUID of the host where the VM will be launched.
+//
+// 	imageId – This is the image ID of the image created by the cloud orchestrator.
+//
+// 	imageEncrypted – This is a boolean value indicating if the image downloaded on the host by the cloud orchestrator was encrypted.
+func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (vm.Manifest, error) {
 	err := validate(vmID, hostHardwareUUID, imageID)
 	if err != nil {
-		log.Print("Invalid input: \n",err)
-		return vm.Manifest{},err
+		log.Print("Invalid input: \n", err)
+		return vm.Manifest{}, err
 	}
 
 	vmInfo := vm.Info{}
@@ -245,37 +253,39 @@ func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imag
 	manifest := vm.Manifest{}
 	manifest.ImageEncrypted = imageEncrypted
 	manifest.VmInfo = vmInfo
-	return manifest,nil
+	return manifest, nil
 }
 
-/*
-Decrypt is used to decrypt an encrypted file into the given decrypt location
-with the key in pem format using AES 256 GCM algorithm.
-Input Parameters:
-	encImagePath – This is the absolute path to the encrypted image on disk.
-	decPath – This is the absolute path of the file where the decrypted file will be saved.
-	keyPath – This is the absolute path to the key file used to decrypt the image/file.
-*/
+// Decrypt is used to decrypt an encrypted file into the given decrypt location
+// with the key in pem format using AES 256 GCM algorithm.
+//
+// Input Parameters:
+//
+// 	encImagePath – This is the absolute path to the encrypted image on disk.
+//
+// 	decPath – This is the absolute path of the file where the decrypted file will be saved.
+//
+// 	keyPath – This is the absolute path to the key file used to decrypt the image/file.
 func Decrypt(encImagePath, decPath, keyPath string) {
 
 	// input parameters validation
 	if len(strings.TrimSpace(encImagePath)) <= 0 {
-		log.Fatal("Encrypted file path not given")
+		return errors.New("encrypted file path not given")
 	}
 	if len(strings.TrimSpace(decPath)) <= 0 {
-		log.Fatal("Path to save the decrypted file is not given")
+		return errors.New("path to save the decrypted file is not given")
 	}
 
 	// check if key file exists
 	_, err := os.Stat(keyPath)
 	if os.IsNotExist(err) {
-		log.Fatal("Key does not exist\n", err)
+		return errors.New("key does not exist\n", err)
 	}
 
 	// check if encrypted image file exists
 	_, err = os.Stat(encImagePath)
 	if os.IsNotExist(err) {
-		log.Fatal("Encrypted file does not exist. ", err)
+		return errors.New("encrypted file does not exist. ", err)
 	}
 
 	// read the encrypted file
@@ -283,13 +293,13 @@ func Decrypt(encImagePath, decPath, keyPath string) {
 	plainText := decryptGCM(data, keyPath)
 
 	if len(plainText) <= 0 {
-		log.Fatal("Error during decryption of the file. ", err)
+		return errors.New("error during decryption of the file. ", err)
 	}
 
 	// write the decrypted output to file
 	err = ioutil.WriteFile(decPath, plainText, 0600)
 	if err != nil {
-		log.Fatal("Error during writing to file. ", err)
+		return errors.New("error during writing to file. ", err)
 	}
 }
 
@@ -297,22 +307,22 @@ func decryptGCM(data []byte, keyPath string) []byte {
 	//read the key
 	key, err := readKey(keyPath)
 	if err != nil {
-		log.Fatal("Error while reading th key. ", err)
+		return errors.New("error while reading th key. ", err)
 	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Fatal("Error while creating the cipher. ", err)
+		return errors.New("error while creating the cipher. ", err)
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Fatal("Error while creating a cipher block. ", err)
+		return errors.New("error while creating a cipher block. ", err)
 	}
 	nonce, ciphertext := data[:12], data[12:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		log.Fatal("Error while decrypting the file. ", err)
+		return errors.New("error while decrypting the file. ", err)
 	}
 	return plaintext
 }
