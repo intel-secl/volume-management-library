@@ -53,13 +53,13 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 	// check if device mapper of the same name exists in the given location
 	_, err = os.Stat(deviceMapperLocation)
 	if !os.IsExist(err) {
-		return errors.New("device mapper of the same already exists\n", err)
+		return errors.New("device mapper of the same already exists\n")
 	}
 
 	// check if the key file exists in the location
 	_, err = os.Stat(keyPath)
 	if os.IsNotExist(err) {
-		return errors.New("key file does not exist\n", err)
+		return errors.New("key file does not exist\n"
 	}
 
 	// get loop device associated to the sparse file and format it
@@ -78,7 +78,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 		args = []string{"-v", "luksOpen", deviceLoop, deviceMapperName, "-d", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
-			return errors.New("error trying to open the luks volume\n", err)
+			return errors.New("error trying to open the luks volume\n")
 		} else {
 			formatDevice = true
 		}
@@ -88,7 +88,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 		args = []string{"status", deviceMapperLocation}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if !strings.Contains(cmdOutput, "active") {
-			return errors.New("volume is not active for use\n", err)
+			return errors.New("volume is not active for use\n")
 		}
 	}
 	// 9. format the volume
@@ -97,7 +97,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 		args = []string{"-v", deviceMapperLocation}
 		cmdOutput, err = runCommand("mkfs.ext4", args)
 		if err != nil {
-			return errors.New("error trying to format the luks volume\n", err)
+			return errors.New("error trying to format the luks volume\n")
 		}
 	}
 }
@@ -119,7 +119,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		args = []string{"-s", diskSize, sparseFilePath}
 		_, err = runCommand("truncate", args)
 		if err != nil {
-			return errors.New("error creating a sparse file\n", err)
+			return errors.New("error creating a sparse file\n")
 		}
 		formatDevice = true
 	}
@@ -130,7 +130,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err := runCommand("losetup", args)
 	if err != nil {
-		return errors.New("error trying to find a loop device associated with the sparse file\n", err)
+		return errors.New("error trying to find a loop device associated with the sparse file\n")
 	}
 	// find the loop device and associate it with the sparse file
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
@@ -139,7 +139,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		args = []string{"-f", sparseFilePath}
 		cmdOutput, err = runCommand("losetup", args)
 		if err != nil {
-			return errors.New("error trying to accociate a loop device to the sparse file\n", err)
+			return errors.New("error trying to accociate a loop device to the sparse file\n")
 		}
 	}
 
@@ -147,7 +147,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err = runCommand("losetup", args)
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
-		return errors.New("sparse file is not associated to the loop device\n", err)
+		return errors.New("sparse file is not associated to the loop device\n")
 	} else {
 		var modifiedOutput = strings.Split(cmdOutput, ":")
 		deviceLoop = modifiedOutput[0]
@@ -160,7 +160,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		args = []string{"-v", "--batch-mode", "luksFormat", deviceLoop, "-d", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
-			return errors.New("error trying to format the loop device\n", err)
+			return errors.New("error trying to format the loop device\n")
 		}
 	}
 	return deviceLoop
@@ -183,7 +183,7 @@ func DeleteVolume(deviceMapperLocation string) {
 	args := []string{"luksClose", deviceMapperLocation}
 	_, err := runCommand(deleteVolumeCmd, args)
 	if err != nil {
-		return errors.New("error trying to close the device mapper\n", err)
+		return errors.New("error trying to close the device mapper\n")
 	}
 }
 
@@ -205,7 +205,7 @@ func Mount(deviceMapperLocation string, mountLocation string) {
 	// call syscall to mount the file system
 	err := unix.Mount(deviceMapperLocation, mountLocation, "ext4", 0, "")
 	if err != nil {
-		return errors.New("error while trying to mount\n", err)
+		return errors.New("error while trying to mount\n")
 	}
 }
 
@@ -223,7 +223,7 @@ func Unmount(mountLocation string) {
 	// call syscall to unmount the file system from the mount location
 	err := unix.Unmount(mountLocation, 0)
 	if err != nil {
-		return errors.New("error while trying to unmount\n", err)
+		return errors.New("error while trying to unmount\n")
 	}
 }
 
@@ -279,13 +279,13 @@ func Decrypt(encImagePath, decPath, keyPath string) {
 	// check if key file exists
 	_, err := os.Stat(keyPath)
 	if os.IsNotExist(err) {
-		return errors.New("key does not exist\n", err)
+		return errors.New("key does not exist\n")
 	}
 
 	// check if encrypted image file exists
 	_, err = os.Stat(encImagePath)
 	if os.IsNotExist(err) {
-		return errors.New("encrypted file does not exist. ", err)
+		return errors.New("encrypted file does not exist")
 	}
 
 	// read the encrypted file
@@ -293,13 +293,13 @@ func Decrypt(encImagePath, decPath, keyPath string) {
 	plainText := decryptGCM(data, keyPath)
 
 	if len(plainText) <= 0 {
-		return errors.New("error during decryption of the file. ", err)
+		return errors.New("error during decryption of the file")
 	}
 
 	// write the decrypted output to file
 	err = ioutil.WriteFile(decPath, plainText, 0600)
 	if err != nil {
-		return errors.New("error during writing to file. ", err)
+		return errors.New("error during writing to file")
 	}
 }
 
@@ -307,22 +307,22 @@ func decryptGCM(data []byte, keyPath string) []byte {
 	//read the key
 	key, err := readKey(keyPath)
 	if err != nil {
-		return errors.New("error while reading th key. ", err)
+		return errors.New("error while reading th key")
 	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return errors.New("error while creating the cipher. ", err)
+		return errors.New("error while creating the cipher")
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return errors.New("error while creating a cipher block. ", err)
+		return errors.New("error while creating a cipher block")
 	}
 	nonce, ciphertext := data[:12], data[12:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return errors.New("error while decrypting the file. ", err)
+		return errors.New("error while decrypting the file")
 	}
 	return plaintext
 }
