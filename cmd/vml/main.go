@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"intel/isecl/lib/common/pkg/vm"
-	"./"
+	"intel/isecl/lib/vml"
 )
 
 type vmManifest struct {
@@ -16,6 +16,9 @@ type vmManifest struct {
 
 func main() {
 
+	if len(os.Args[0:]) < 2 {
+		log.Fatal("Usage :  ./lib-volume-management <methodname> <parameters>")
+	}
 	var methodName = os.Args[1]
 	var err error
 	
@@ -27,7 +30,7 @@ func main() {
 		}
 		err = vml.CreateVolume(os.Args[2], os.Args[3], os.Args[4], os.Args[5])
 		if err != nil {
-			log.Println("Error : "err)
+			log.Println(err)
 		}
 
 	case "DeleteVolume":
@@ -37,7 +40,7 @@ func main() {
 		}
 		err = vml.DeleteVolume(os.Args[2])
 		if err != nil {
-			log.Println("Error : "err)
+			log.Println(err)
 		}
 
 	case "Mount":
@@ -47,7 +50,7 @@ func main() {
 		}
 		err = vml.Mount(os.Args[2], os.Args[3])
 		if err != nil {
-			log.Println("Error : "err)
+			log.Println(err)
 		}
 
 	case "Unmount":
@@ -57,7 +60,7 @@ func main() {
 		}
 		err = vml.Unmount(os.Args[2])
 		if err != nil {
-			log.Println("Error : "err)
+			log.Println(err)
 		}
 
 	case "Decrypt":
@@ -67,7 +70,7 @@ func main() {
 		}
 		err = vml.Decrypt(os.Args[2], os.Args[3], os.Args[4])
 		if err != nil {
-			log.Println("Error : "err)
+			log.Println(err)
 		}
 
 	case "CreateVMManifest":
@@ -80,7 +83,7 @@ func main() {
 		var manifest vmManifest
 		manifest.Manifest = createdManifest
 		if err != nil {
-			log.Println("Error : "err)
+			log.Println(err)
 		}
 		log.Printf(serialize(manifest))
 

@@ -63,7 +63,10 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 	}
 
 	// get loop device associated to the sparse file and format it
-	deviceLoop = getLoopDevice(sparseFilePath, diskSize, keyPath, formatDevice)
+	deviceLoop, err = getLoopDevice(sparseFilePath, diskSize, keyPath, formatDevice)
+	if err != nil {
+		return errors.New("error while trying to get the device loop")
+	}
 
 	var deviceMapperString = strings.Split(deviceMapperLocation, "/")
 	var deviceMapperName = deviceMapperString[len(deviceMapperString)-1]
@@ -105,7 +108,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 
 // This function is used to create a sparse file is it doesn't exist,
 // find a loop device and associate the sparse file with it.
-func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) string {
+func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) (string, error) {
 	var err error
 	var args []string
 	var deviceLoop string
@@ -120,7 +123,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		args = []string{"-s", diskSize, sparseFilePath}
 		_, err = runCommand("truncate", args)
 		if err != nil {
-			return errors.New("error creating a sparse file")
+			return "", errors.New("error creating a sparse file")
 		}
 		formatDevice = true
 	}
@@ -131,7 +134,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err := runCommand("losetup", args)
 	if err != nil {
-		return errors.New("error trying to find a loop device associated with the sparse file")
+		return "", errors.New("error trying to find a loop device associated with the sparse file")
 	}
 	// find the loop device and associate it with the sparse file
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
@@ -140,7 +143,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		args = []string{"-f", sparseFilePath}
 		cmdOutput, err = runCommand("losetup", args)
 		if err != nil {
-			return errors.New("error trying to accociate a loop device to the sparse file")
+			return "", errors.New("error trying to accociate a loop device to the sparse file")
 		}
 	}
 
@@ -148,7 +151,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err = runCommand("losetup", args)
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
-		return errors.New("sparse file is not associated to the loop device")
+		return "", errors.New("sparse file is not associated to the loop device")
 	} else {
 		var modifiedOutput = strings.Split(cmdOutput, ":")
 		deviceLoop = modifiedOutput[0]
@@ -161,10 +164,10 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		args = []string{"-v", "--batch-mode", "luksFormat", deviceLoop, "-d", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
-			return errors.New("error trying to format the loop device")
+			return "", errors.New("error trying to format the loop device")
 		}
 	}
-	return deviceLoop
+	return deviceLoop, nil
 }
 
 // DeleteVolume method is used to delete the given dm-crypt volume.
@@ -186,6 +189,7 @@ func DeleteVolume(deviceMapperLocation string) error{
 	if err != nil {
 		return errors.New("error trying to close the device mapper")
 	}
+	return nil
 }
 
 // Mount method is used to attach the filesystem on the device mapper of a specific type at the mount path.
@@ -208,6 +212,7 @@ func Mount(deviceMapperLocation string, mountLocation string) error{
 	if err != nil {
 		return errors.New("error while trying to mount")
 	}
+	return nil
 }
 
 // Unmount method is used to detach the filesystem from the mount path.
@@ -226,6 +231,7 @@ func Unmount(mountLocation string) error{
 	if err != nil {
 		return errors.New("error while trying to unmount")
 	}
+	return nil
 }
 
 // CreateVMManifest is used to create a VM manifest and return a manifest.
@@ -291,9 +297,9 @@ func Decrypt(encImagePath, decPath, keyPath string) error{
 
 	// read the encrypted file
 	data, _ := ioutil.ReadFile(encImagePath)
-	plainText := decryptGCM(data, keyPath)
+	plainText, err := decryptGCM(data, keyPath)
 
-	if len(plainText) <= 0 {
+	if (err != nil) || (len(plainText) <= 0) {
 		return errors.New("error during decryption of the file")
 	}
 
@@ -302,30 +308,32 @@ func Decrypt(encImagePath, decPath, keyPath string) error{
 	if err != nil {
 		return errors.New("error during writing to file")
 	}
+	return nil
 }
 
-func decryptGCM(data []byte, keyPath string) []byte {
+func decryptGCM(data []byte, keyPath string) ([]byte, error) {
+	var plaintext []byte
 	//read the key
 	key, err := readKey(keyPath)
 	if err != nil {
-		return errors.New("error while reading th key")
+		return plaintext, errors.New("error while reading th key")
 	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return errors.New("error while creating the cipher")
+		return plaintext, errors.New("error while creating the cipher")
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return errors.New("error while creating a cipher block")
+		return plaintext, errors.New("error while creating a cipher block")
 	}
 	nonce, ciphertext := data[:12], data[12:]
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	plaintext, err = gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return errors.New("error while decrypting the file")
+		return plaintext, errors.New("error while decrypting the file")
 	}
-	return plaintext
+	return plaintext, nil
 }
 
 func runCommand(cmd string, args []string) (string, error) {
