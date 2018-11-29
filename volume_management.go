@@ -59,7 +59,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 	// check if the key file exists in the location
 	_, err = os.Stat(keyPath)
 	if os.IsNotExist(err) {
-		return errors.New("key file does not exist\n"
+		return errors.New("key file does not exist\n")
 	}
 
 	// get loop device associated to the sparse file and format it
