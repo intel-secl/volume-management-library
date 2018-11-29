@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"intel/isecl/lib/common/pkg/vm"
-	"intel/isecl/lib/vml"
+	"./"
 )
 
 type vmManifest struct {

@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// CreateVolume is used to create the sparse file if it doesn’t exist, associate the sparse file
+// CreateVolume is used to create the sparse file if it does not exist, associate the sparse file
 // with the image and create the dm-crypt volume for an image or the instance.
 //
 // Input Parameters:
