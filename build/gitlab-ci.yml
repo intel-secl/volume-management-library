@@ -6,7 +6,7 @@ before_script:
   - echo "        proxy = \"\"" >> ~/.gitconfig
   - export http_proxy=http://proxy-us.intel.com:911
   - export https_proxy=http://proxy-us.intel.com:911
-  - epxort no_proxy=*.intel.com
+  - export no_proxy=*.intel.com
   - cd $CI_PROJECT_DIR
 
 stages:
