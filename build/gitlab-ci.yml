@@ -4,9 +4,6 @@ before_script:
   - git config --global http.proxy "http://proxy-us.intel.com:911"
   - echo "[http \"https://gitlab.devtools.intel.com\"]" >> ~/.gitconfig
   - echo "        proxy = \"\"" >> ~/.gitconfig
-  - export http_proxy=http://proxy-us.intel.com:911
-  - export https_proxy=http://proxy-us.intel.com:911
-  - export no_proxy=*.intel.com
   - cd $CI_PROJECT_DIR
 
 stages:
@@ -25,4 +22,4 @@ compile:
   tags:
     - go
   script:
-    - go build ./...
+    - env http_proxy=http://proxy-us.intel.com:911 no_proxy=*.intel.com go build ./...
