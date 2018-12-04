@@ -1,3 +1,5 @@
+// +build linux
+
 package vml
 
 import (
@@ -13,6 +15,7 @@ import (
 	"strings"
 
 	"intel/isecl/lib/common/pkg/vm"
+
 	"golang.org/x/sys/unix"
 )
 
@@ -29,7 +32,7 @@ import (
 // 	keyPath – This is the absolute path to the key file.
 //
 // 	diskSize – This is the size of the sparse file to be created.
-func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath string, diskSize string) error{
+func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath string, diskSize string) error {
 	var formatDevice = false
 	var args []string
 	var deviceLoop string
@@ -175,7 +178,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 // Input Parameter:
 //
 // 	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
-func DeleteVolume(deviceMapperLocation string) error{
+func DeleteVolume(deviceMapperLocation string) error {
 	//validate input parameters
 	if len(strings.TrimSpace(deviceMapperLocation)) <= 0 {
 		return errors.New("device mapper location not given")
@@ -199,7 +202,7 @@ func DeleteVolume(deviceMapperLocation string) error{
 // 	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
 //
 // 	mountLocation – This is the mount point location where the device will be mounted
-func Mount(deviceMapperLocation string, mountLocation string) error{
+func Mount(deviceMapperLocation string, mountLocation string) error {
 	//input parameters validation
 	if len(strings.TrimSpace(deviceMapperLocation)) <= 0 {
 		return errors.New("device mapper location not given")
@@ -220,7 +223,7 @@ func Mount(deviceMapperLocation string, mountLocation string) error{
 // Input Parameter:
 //
 // 	mountLocation – This is the mount point location  where we want to unmount the device.
-func Unmount(mountLocation string) error{
+func Unmount(mountLocation string) error {
 	//input parameters validation
 	if len(strings.TrimSpace(mountLocation)) <= 0 {
 		return errors.New("unmount location not given")
@@ -273,7 +276,7 @@ func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imag
 // 	decPath – This is the absolute path of the file where the decrypted file will be saved.
 //
 // 	keyPath – This is the absolute path to the key file used to decrypt the image/file.
-func Decrypt(encImagePath, decPath, keyPath string) error{
+func Decrypt(encImagePath, decPath, keyPath string) error {
 
 	// input parameters validation
 	if len(strings.TrimSpace(encImagePath)) <= 0 {
