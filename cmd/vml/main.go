@@ -85,10 +85,14 @@ func main() {
 		if err != nil {
 			log.Println(err)
 		}
-		log.Printf(serialize(manifest))
+		manifestOutput, err := serialize(manifest)
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println(manifestOutput)
 
 	default:
-		log.Printf("Invalid method name. \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt")
+		log.Println("Invalid method name. \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt")
 	}
 }
 

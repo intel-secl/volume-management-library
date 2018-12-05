@@ -52,7 +52,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 
 	// check if device mapper of the same name exists in the given location
 	_, err = os.Stat(deviceMapperLocation)
-	if !os.IsExist(err) {
+	if  !os.IsNotExist(err) {
 		return errors.New("device mapper of the same already exists")
 	}
 
