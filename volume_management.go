@@ -24,14 +24,14 @@ import (
 //
 // Input Parameters:
 //
-// 	sparseFilePath – This is the absolute path to the sparse file. All the directories leading up to
-// 					 the file must be created before running this test.
+// 	sparseFilePath – Absolute path of the sparse file. All the directories leading up to
+// 					 the file must be created before using this method.
 //
-// 	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
+// 	deviceMapperLocation – Absolute path of the dm-crypt volume.
 //
-// 	keyPath – This is the absolute path to the key file.
+// 	keyPath – Absolute path of the key file.
 //
-// 	diskSize – This is the size of the sparse file to be created.
+// 	diskSize – Size of the sparse file to be created.
 func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath string, diskSize string) error {
 	var formatDevice = false
 	var args []string
@@ -177,7 +177,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 //
 // Input Parameter:
 //
-// 	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
+// 	deviceMapperLocation – Absolute path of the dm-crypt volume.
 func DeleteVolume(deviceMapperLocation string) error {
 	//validate input parameters
 	if len(strings.TrimSpace(deviceMapperLocation)) <= 0 {
@@ -199,9 +199,9 @@ func DeleteVolume(deviceMapperLocation string) error {
 //
 // Input Parameters:
 //
-// 	deviceMapperLocation – This is the absolute path to the dm-crypt volume.
+// 	deviceMapperLocation – Absolute path of the dm-crypt volume.
 //
-// 	mountLocation – This is the mount point location where the device will be mounted
+// 	mountLocation – Mount point location where the device will be mounted
 func Mount(deviceMapperLocation string, mountLocation string) error {
 	//input parameters validation
 	if len(strings.TrimSpace(deviceMapperLocation)) <= 0 {
@@ -222,7 +222,7 @@ func Mount(deviceMapperLocation string, mountLocation string) error {
 //
 // Input Parameter:
 //
-// 	mountLocation – This is the mount point location  where we want to unmount the device.
+// 	mountLocation – Mount point location  where we want to unmount the device.
 func Unmount(mountLocation string) error {
 	//input parameters validation
 	if len(strings.TrimSpace(mountLocation)) <= 0 {
@@ -241,13 +241,13 @@ func Unmount(mountLocation string) error {
 //
 // Input Parameters:
 //
-// 	vmId – This is the VM instance UUID.
+// 	vmId – VM instance UUID.
 //
-// 	hostHardwareUuid – This is the hardware UUID of the host where the VM will be launched.
+// 	hostHardwareUuid – Hardware UUID of the host where the VM will be launched.
 //
-// 	imageId – This is the image ID of the image created by the cloud orchestrator.
+// 	imageId – Image ID of the image created by the cloud orchestrator.
 //
-// 	imageEncrypted – This is a boolean value indicating if the image downloaded on the host by the cloud orchestrator was encrypted.
+// 	imageEncrypted – A boolean value indicating if the image downloaded on the host by the cloud orchestrator was encrypted.
 func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (vm.Manifest, error) {
 	err := validate(vmID, hostHardwareUUID, imageID)
 	if err != nil {
@@ -271,11 +271,11 @@ func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imag
 //
 // Input Parameters:
 //
-// 	encImagePath – This is the absolute path to the encrypted image on disk.
+// 	encImagePath – Absolute path of the encrypted image on disk.
 //
-// 	decPath – This is the absolute path of the file where the decrypted file will be saved.
+// 	decPath – Absolute path of the file where the decrypted file will be saved.
 //
-// 	keyPath – This is the absolute path to the key file used to decrypt the image/file.
+// 	keyPath – Absolute path of the key file used to decrypt the image/file.
 func Decrypt(encImagePath, decPath, keyPath string) error {
 
 	// input parameters validation
