@@ -31,6 +31,8 @@ func main() {
 		err = vml.CreateVolume(os.Args[2], os.Args[3], os.Args[4], os.Args[5])
 		if err != nil {
 			log.Println(err)
+		} else {
+			log.Printf("Volume created successfully in %s\n", os.Args[3])
 		}
 
 	case "DeleteVolume":
@@ -41,6 +43,8 @@ func main() {
 		err = vml.DeleteVolume(os.Args[2])
 		if err != nil {
 			log.Println(err)
+		} else {
+			log.Printf("Volume %s deleted successfully\n", os.Args[2])
 		}
 
 	case "Mount":
@@ -51,6 +55,8 @@ func main() {
 		err = vml.Mount(os.Args[2], os.Args[3])
 		if err != nil {
 			log.Println(err)
+		} else {
+			log.Printf("Mount Successful\n")
 		}
 
 	case "Unmount":
@@ -61,6 +67,8 @@ func main() {
 		err = vml.Unmount(os.Args[2])
 		if err != nil {
 			log.Println(err)
+		} else {
+			log.Printf("Unmount Successful\n")
 		}
 
 	case "Decrypt":
@@ -71,6 +79,8 @@ func main() {
 		err = vml.Decrypt(os.Args[2], os.Args[3], os.Args[4])
 		if err != nil {
 			log.Println(err)
+		} else {
+			log.Printf("Image decrypted successfully in %s\n", os.Args[3])
 		}
 
 	case "CreateVMManifest":
@@ -88,8 +98,9 @@ func main() {
 		manifestOutput, err := serialize(manifest)
 		if err != nil {
 			log.Println(err)
+		} else {
+			log.Println(manifestOutput)
 		}
-		log.Println(manifestOutput)
 
 	default:
 		log.Println("Invalid method name. \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt")
