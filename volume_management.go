@@ -8,7 +8,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"io/ioutil"
-	"log"
+	//"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -17,6 +17,7 @@ import (
 	"intel/isecl/lib/common/pkg/vm"
 
 	"golang.org/x/sys/unix"
+	"fmt"
 )
 
 // CreateVolume is used to create the sparse file if it does not exist, associate the sparse file
@@ -75,12 +76,15 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 	var deviceMapperName = deviceMapperString[len(deviceMapperString)-1]
 
 	// check the status of the device device mapper
-	log.Println("Checking the status of the device mapper ...")
+	fmt.Println("Checking the status of the device mapper ...")
 	args = []string{"status", deviceMapperLocation}
 	cmdOutput, err = runCommand("cryptsetup", args)
 	if strings.Contains(cmdOutput, "inactive") {
-		log.Println("The device mapper is inactive, opening the luks volume ...")
+		fmt.Println("The device mapper is inactive, opening the luks volume ...")
 		// open the luks volume
+		fmt.Println("dev loop name:", deviceLoop)
+		fmt.Println("deviceMapperName:", deviceMapperName)
+		fmt.Println("keyPath:", keyPath)
 		args = []string{"-v", "luksOpen", deviceLoop, deviceMapperName, "-d", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
@@ -90,7 +94,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 		}
 
 		//checking the status of the volume again
-		log.Println("Checking the status of the device mapper ... ")
+		fmt.Println("Checking the status of the device mapper ... ")
 		args = []string{"status", deviceMapperLocation}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if !strings.Contains(cmdOutput, "active") {
@@ -98,7 +102,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 		}
 	}
 	// 9. format the volume
-	log.Println("Formatting the dm-crypt volume ...")
+	fmt.Println("Formatting the dm-crypt volume ...")
 	if formatDevice {
 		args = []string{"-v", deviceMapperLocation}
 		cmdOutput, err = runCommand("mkfs.ext4", args)
@@ -117,11 +121,11 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	var deviceLoop string
 
 	// check if the sparse file exists
-	log.Println("Checking if the sparse file exists ... ")
+	fmt.Println("Checking if the sparse file exists ... ")
 	_, err = os.Stat(sparseFilePath)
 	// sparse file does not exist, creating a new sparsefile
 	if os.IsNotExist(err) {
-		log.Println("Sparse file does not exist, creating a new file")
+		fmt.Println("Sparse file does not exist, creating a new file")
 		// create a sparse file
 		args = []string{"-s", diskSize, sparseFilePath}
 		_, err = runCommand("truncate", args)
@@ -130,10 +134,10 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 		}
 		formatDevice = true
 	}
-	log.Println("Sparse file exists in location ", sparseFilePath)
+	fmt.Println("Sparse file exists in location ", sparseFilePath)
 
 	// find the loop device associated to the sparse file
-	log.Println("Finding a loop device that is associated to the sparse file ...")
+	fmt.Println("Finding a loop device that is associated to the sparse file ...")
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err := runCommand("losetup", args)
 	if err != nil {
@@ -141,7 +145,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	}
 	// find the loop device and associate it with the sparse file
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
-		log.Println("Associating a loop device to the sparse file ...")
+		fmt.Println("Associating a loop device to the sparse file ...")
 		// find the loop device
 		args = []string{"-f", sparseFilePath}
 		cmdOutput, err = runCommand("losetup", args)
@@ -158,12 +162,12 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	} else {
 		var modifiedOutput = strings.Split(cmdOutput, ":")
 		deviceLoop = modifiedOutput[0]
-		log.Println("The sparse file is associated to the loop device ", deviceLoop)
+		fmt.Println("The sparse file is associated to the loop device ", deviceLoop)
 	}
 
 	// format loop device
 	if formatDevice {
-		log.Println("Formatting the loop device ...")
+		fmt.Println("Formatting the loop device ...")
 		args = []string{"-v", "--batch-mode", "luksFormat", deviceLoop, "-d", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
@@ -177,7 +181,7 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 //
 // Input Parameter:
 //
-// 	deviceMapperLocation – Absolute path of the dm-crypt volume.
+// deviceMapperLocation – Absolute path of the dm-crypt volume.
 func DeleteVolume(deviceMapperLocation string) error {
 	//validate input parameters
 	if len(strings.TrimSpace(deviceMapperLocation)) <= 0 {
@@ -185,7 +189,7 @@ func DeleteVolume(deviceMapperLocation string) error {
 	}
 
 	// build and excute the cryptsetup luksClose command to close and delete the volume
-	log.Println("Deleting the dm-crypt volume ...")
+	fmt.Println("Deleting the dm-crypt volume ...")
 	deleteVolumeCmd := "cryptsetup"
 	args := []string{"luksClose", deviceMapperLocation}
 	_, err := runCommand(deleteVolumeCmd, args)
@@ -251,7 +255,7 @@ func Unmount(mountLocation string) error {
 func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (vm.Manifest, error) {
 	err := validate(vmID, hostHardwareUUID, imageID)
 	if err != nil {
-		log.Print("Invalid input: \n", err)
+		fmt.Println("Invalid input: \n", err)
 		return vm.Manifest{}, err
 	}
 
