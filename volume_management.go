@@ -348,11 +348,12 @@ func decryptGCM(data []byte, keyPath string) ([]byte, error) {
 	var plaintext []byte
 	//read the key
 	fmt.Println("decryptGCM: reading the key")
-	key, err := readKey(keyPath)
+	key, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		return plaintext, errors.New("error while reading the key")
 	}
 
+	fmt.Println("Key :", base64.StdEncoding.EncodeToString(key))
 	fmt.Println("decryptGCM: creating a cipher block")
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -378,20 +379,20 @@ func runCommand(cmd string, args []string) (string, error) {
 	return string(out), err
 }
 
-func readKey(filename string) ([]byte, error) {
-	fmt.Println("Decrypt: reading key file")
-	key, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
+// func readKey(filename string) ([]byte, error) {
+// 	fmt.Println("Decrypt: reading key file")
+// 	key, err := ioutil.ReadFile(filename)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 	
-	fmt.Println("Decrypt: getting pem block")
-	block, _  := pem.Decode(key)
-	if block == nil {
-		return nil, errors.New("error while decoding the pem file")
-	}
-	return block.Bytes, nil
-}
+// 	fmt.Println("Decrypt: getting pem block")
+// 	block, _  := pem.Decode(key)
+// 	if block == nil {
+// 		return nil, errors.New("error while decoding the pem file")
+// 	}
+// 	return block.Bytes, nil
+// }
 
 func isValidUUID(uuid string) bool {
 	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
