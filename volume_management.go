@@ -127,7 +127,8 @@ func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) 
 	if os.IsNotExist(err) {
 		fmt.Println("Sparse file does not exist, creating a new file")
 		// create a sparse file
-		args = []string{"-s", diskSize, sparseFilePath}
+		size := diskSize + "GB"
+		args = []string{"-s", size, sparseFilePath}
 		_, err = runCommand("truncate", args)
 		if err != nil {
 			return "", errors.New("error creating a sparse file")
