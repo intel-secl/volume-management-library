@@ -18,6 +18,7 @@ import (
 
 	"golang.org/x/sys/unix"
 	"fmt"
+	"strconv"
 )
 
 // CreateVolume is used to create the sparse file if it does not exist, associate the sparse file
@@ -33,7 +34,7 @@ import (
 // 	keyPath – Absolute path of the key file.
 //
 // 	diskSize – Size of the sparse file to be created.
-func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath string, diskSize string) error {
+func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath string, diskSize int) error {
 	var formatDevice = false
 	var args []string
 	var deviceLoop string
@@ -50,8 +51,8 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 	if len(strings.TrimSpace(keyPath)) <= 0 {
 		return errors.New("key path not given")
 	}
-	if len(strings.TrimSpace(diskSize)) <= 0 {
-		return errors.New("sparse file size not given")
+	if diskSize <= 0 {
+		return errors.New("sparse file size should be greater than 0")
 	}
 
 	// check if device mapper of the same name exists in the given location
@@ -115,26 +116,38 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, keyPath st
 
 // This function is used to create a sparse file is it doesn't exist,
 // find a loop device and associate the sparse file with it.
-func getLoopDevice(sparseFilePath, diskSize, keyPath string, formatDevice bool) (string, error) {
+func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDevice bool) (string, error) {
 	var err error
 	var args []string
 	var deviceLoop string
 
 	// check if the sparse file exists
 	fmt.Println("Checking if the sparse file exists ... ")
-	_, err = os.Stat(sparseFilePath)
+	fileInfo, err := os.Stat(sparseFilePath)
+	var fileSizeMatches = false
+
+	// if sparse file exists, check if the file size matches the given disk size
+	if !os.IsNotExist(err) {
+		diskSizeInBytes := diskSize * 1000000000
+		fmt.Println("The file size %d:", fileInfo.Size())
+		fmt.Println("The given disk size %d", diskSizeInBytes)
+		if int64(diskSizeInBytes) == fileInfo.Size() {
+			fileSizeMatches = true
+		}
+	}
+
 	// sparse file does not exist, creating a new sparsefile
-	if os.IsNotExist(err) {
+	if (os.IsNotExist(err)) || !fileSizeMatches {
 		fmt.Println("Sparse file does not exist, creating a new file")
 		// create a sparse file
-		size := diskSize + "GB"
+		size := strconv.Itoa(diskSize) + "GB"
 		args = []string{"-s", size, sparseFilePath}
 		_, err = runCommand("truncate", args)
 		if err != nil {
 			return "", errors.New("error creating a sparse file")
 		}
 		formatDevice = true
-	}
+	} 
 	fmt.Println("Sparse file exists in location ", sparseFilePath)
 
 	// find the loop device associated to the sparse file

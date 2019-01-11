@@ -21,14 +21,15 @@ func main() {
 	}
 	var methodName = os.Args[1]
 	var err error
-	
+
 	switch methodName {
 	case "CreateVolume":
 		log.Printf("Create volume method called")
 		if len(os.Args[1:]) < 5 {
 			log.Fatal("Usage :  ./lib-volume-management CreateVolume sparseFilePath deviceMapperLocation keyFile diskSize")
 		}
-		err = vml.CreateVolume(os.Args[2], os.Args[3], os.Args[4], os.Args[5])
+		size, _ := strconv.Atoi(os.Args[5])
+		err = vml.CreateVolume(os.Args[2], os.Args[3], os.Args[4], size)
 		if err != nil {
 			log.Println(err)
 		} else {
