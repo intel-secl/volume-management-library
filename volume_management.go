@@ -19,6 +19,7 @@ import (
 	"golang.org/x/sys/unix"
 	"fmt"
 	"strconv"
+	"encoding/base64"
 )
 
 // CreateVolume is used to create the sparse file if it does not exist, associate the sparse file
@@ -304,11 +305,16 @@ func Decrypt(encImagePath, decPath, keyPath string) error {
 		return errors.New("path to save the decrypted file is not given")
 	}
 
+	fmt.Println("enc image path: ", encImagePath)
+	fmt.Println("decPath:", decPath)
+
 	// check if key file exists
 	_, err := os.Stat(keyPath)
 	if os.IsNotExist(err) {
 		return errors.New("key does not exist")
 	}
+
+	fmt.Println("Key exists")
 
 	// check if encrypted image file exists
 	_, err = os.Stat(encImagePath)
@@ -316,8 +322,14 @@ func Decrypt(encImagePath, decPath, keyPath string) error {
 		return errors.New("encrypted file does not exist")
 	}
 
+	fmt.Println("enc image exists ", encImagePath)
+
 	// read the encrypted file
-	data, _ := ioutil.ReadFile(encImagePath)
+	data, err := ioutil.ReadFile(encImagePath) 
+	if err != nil {
+		return errors.New("error while reading the image")
+	}
+
 	plainText, err := decryptGCM(data, keyPath)
 
 	if (err != nil) || (len(plainText) <= 0) {
@@ -335,21 +347,25 @@ func Decrypt(encImagePath, decPath, keyPath string) error {
 func decryptGCM(data []byte, keyPath string) ([]byte, error) {
 	var plaintext []byte
 	//read the key
+	fmt.Println("decryptGCM: reading the key")
 	key, err := readKey(keyPath)
 	if err != nil {
-		return plaintext, errors.New("error while reading th key")
+		return plaintext, errors.New("error while reading the key")
 	}
 
+	fmt.Println("decryptGCM: creating a cipher block")
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return plaintext, errors.New("error while creating the cipher")
 	}
 
+	fmt.Println("decryptGCM: getting gcm object")
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		return plaintext, errors.New("error while creating a cipher block")
 	}
 	nonce, ciphertext := data[:12], data[12:]
+	fmt.Println("decryptGCM: nonce value ", base64.StdEncoding.EncodeToString(nonce))
 	plaintext, err = gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return plaintext, errors.New("error while decrypting the file")
@@ -363,11 +379,17 @@ func runCommand(cmd string, args []string) (string, error) {
 }
 
 func readKey(filename string) ([]byte, error) {
+	fmt.Println("Decrypt: reading key file")
 	key, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return key, err
+		return nil, err
 	}
-	block, _ := pem.Decode(key)
+	
+	fmt.Println("Decrypt: getting pem block")
+	block, _  := pem.Decode(key)
+	if block == nil {
+		return nil, errors.New("error while decoding the pem file")
+	}
 	return block.Bytes, nil
 }
 
