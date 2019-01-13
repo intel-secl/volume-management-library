@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"intel/isecl/lib/common/pkg/vm"
+	"intel/isecl/lib/vml"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
-
-	"intel/isecl/lib/common/pkg/vm"
-	"intel/isecl/lib/vml"
+	"strings"
 )
 
 type vmManifest struct {
@@ -29,7 +32,12 @@ func main() {
 			log.Fatal("Usage :  ./lib-volume-management CreateVolume sparseFilePath deviceMapperLocation keyFile diskSize")
 		}
 		size, _ := strconv.Atoi(os.Args[5])
-		err = vml.CreateVolume(os.Args[2], os.Args[3], os.Args[4], size)
+		key, err := hex.DecodeString(os.Args[4])
+		if err != nil {
+			log.Println("Invalid hex format for the key")
+		}
+
+		err = vml.CreateVolume(os.Args[2], os.Args[3], key, size)
 		if err != nil {
 			log.Println(err)
 		} else {
@@ -74,14 +82,51 @@ func main() {
 
 	case "Decrypt":
 		log.Printf("Decrypt method called")
-		if len(os.Args[1:]) < 4 {
-			log.Fatal("Usage :  ./lib-volume-management Decrypt encFileLocation decFileLocation keyLocation")
+
+		// input parameters validation
+		encImagePath := os.Args[2]
+		decPath := os.Args[3]
+		key, err := hex.DecodeString(os.Args[4])
+		if err != nil {
+			log.Println("Invalid hex format for the key")
 		}
-		err = vml.Decrypt(os.Args[2], os.Args[3], os.Args[4])
+		if len(strings.TrimSpace(encImagePath)) <= 0 {
+			log.Println("Encrypted file path is not given")
+			log.Fatal("Usage :  ./lib-volume-management Decrypt encFilePath decFilePath keyPath")
+		}
+
+		if len(strings.TrimSpace(decPath)) <= 0 {
+			log.Println("Path to save the decrypted file is not given")
+			log.Fatal("Usage :  ./lib-volume-management Decrypt encFilePath decFilePath keyPath")
+		}
+
+		fmt.Println("enc image path: ", encImagePath)
+		fmt.Println("decPath:", decPath)
+
+		// check if encrypted image file exists
+		_, err = os.Stat(encImagePath)
+		if os.IsNotExist(err) {
+			log.Fatal("encrypted file does not exist")
+		}
+
+		fmt.Println("enc image exists ", encImagePath)
+
+		// read the encrypted file
+		encryptedData, err := ioutil.ReadFile(encImagePath)
+		if err != nil {
+			log.Fatal("error while reading the image")
+		}
+
+		decryptedData, err := vml.Decrypt(encryptedData, key)
 		if err != nil {
 			log.Println(err)
 		} else {
-			log.Printf("Image decrypted successfully in %s\n", os.Args[3])
+			log.Printf("File decrypted successfully")
+		}
+		//Save to file
+		err = ioutil.WriteFile(decPath, decryptedData, 0600)
+		if err != nil {
+			log.Fatal("error during writing to file")
 		}
 
 	case "CreateVMManifest":
