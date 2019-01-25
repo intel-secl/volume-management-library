@@ -332,8 +332,10 @@ func Decrypt(data, key []byte) ([]byte, error) {
 		log.Println("Error: ", err)
 		return nil, errors.New("error while creating a cipher block")
 	}
-	nonce, ciphertext := data[:12], data[12:]
+	
+	encryptionIndicator, nonce, ciphertext := data[:7], data[7:19], data[19:]
 	fmt.Println("decryptGCM: IV value ", base64.StdEncoding.EncodeToString(nonce))
+	fmt.Println("encryption indicator found: ", encryptionIndicator)
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		log.Println("Error: ", err)
