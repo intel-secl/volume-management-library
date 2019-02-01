@@ -17,15 +17,7 @@ import (
 	"strconv"
 	"encoding/base64"
 	"io/ioutil"
-	"encoding/json"
 )
-
-// EncryptionHeader is used append to the encrypted file during AES GCM encryption mode
-type EncryptionHeader struct {
-	MagicText string
-	Algorithm string
-	IV        []byte
-}
 
 // CreateVolume is used to create the sparse file if it does not exist, associate the sparse file
 // with the image and create the dm-crypt volume for an image or the instance.
@@ -326,8 +318,6 @@ func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imag
 //
 func Decrypt(data, key []byte) ([]byte, error) {
 
-	var encryptionHeader EncryptionHeader
-
 	fmt.Println("Key :", base64.StdEncoding.EncodeToString(key))
 	fmt.Println("decryptGCM: creating a cipher block")
 	block, err := aes.NewCipher(key)
@@ -343,13 +333,8 @@ func Decrypt(data, key []byte) ([]byte, error) {
 		return nil, errors.New("error while creating a cipher block")
 	}
 	
-	err = json.Unmarshal(data[:80], &encryptionHeader)
-	if err != nil {
-		log.Println("Error: ", err)
-		return nil, errors.New("error while unmarshalling the encryption header")
-	}
-
-	plaintext, err := gcm.Open(nil, encryptionHeader.IV, data[80:], nil)
+	_, iv, encryptedData := data[:48], data[20:32], data[48:]
+	plaintext, err := gcm.Open(nil, iv, encryptedData, nil)
 	if err != nil {
 		log.Println("Error: ", err)
 		return nil, errors.New("error while decrypting the file")
