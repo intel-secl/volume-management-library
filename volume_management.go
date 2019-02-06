@@ -12,11 +12,13 @@ import (
 	"regexp"
 	"strings"
 	"intel/isecl/lib/common/pkg/vm"
+	"intel/isecl/lib/common/model"
 	"golang.org/x/sys/unix"
 	"fmt"
 	"strconv"
 	"encoding/base64"
 	"io/ioutil"
+	"unsafe"
 )
 
 // CreateVolume is used to create the sparse file if it does not exist, associate the sparse file
@@ -318,6 +320,7 @@ func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imag
 //
 func Decrypt(data, key []byte) ([]byte, error) {
 
+	var encryptionHeader model.EncryptionHeader
 	fmt.Println("Key :", base64.StdEncoding.EncodeToString(key))
 	fmt.Println("decryptGCM: creating a cipher block")
 	block, err := aes.NewCipher(key)
@@ -333,7 +336,10 @@ func Decrypt(data, key []byte) ([]byte, error) {
 		return nil, errors.New("error while creating a cipher block")
 	}
 	
-	_, iv, encryptedData := data[:48], data[20:32], data[48:]
+	iv := data[int(unsafe.Sizeof(encryptionHeader.Offset))+len(encryptionHeader.MagicText) : int(unsafe.Sizeof(encryptionHeader.Offset))+len(encryptionHeader.MagicText)+len(encryptionHeader.IV)]
+
+	encryptedData := data[int(unsafe.Sizeof(encryptionHeader))-1:]
+
 	plaintext, err := gcm.Open(nil, iv, encryptedData, nil)
 	if err != nil {
 		log.Println("Error: ", err)
