@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"unsafe"
+	"encoding/binary"
 )
 
 // CreateVolume is used to create the sparse file if it does not exist, associate the sparse file
@@ -336,9 +337,11 @@ func Decrypt(data, key []byte) ([]byte, error) {
 		return nil, errors.New("error while creating a cipher block")
 	}
 	
-	iv := data[int(unsafe.Sizeof(encryptionHeader.Offset))+len(encryptionHeader.MagicText) : int(unsafe.Sizeof(encryptionHeader.Offset))+len(encryptionHeader.MagicText)+len(encryptionHeader.IV)]
+	iv := data[int(unsafe.Sizeof(encryptionHeader.OffsetInLittleEndian))+len(encryptionHeader.MagicText) : int(unsafe.Sizeof(encryptionHeader.OffsetInLittleEndian))+len(encryptionHeader.MagicText)+len(encryptionHeader.IV)]
 
-	encryptedData := data[int(unsafe.Sizeof(encryptionHeader))-1:]
+	payloadOffset := data[len(encryptionHeader.MagicText) : len(encryptionHeader.MagicText)+int(unsafe.Sizeof(encryptionHeader.OffsetInLittleEndian))]
+	offsetInInt := binary.LittleEndian.Uint32(payloadOffset)
+	encryptedData := data[offsetInInt:]
 
 	plaintext, err := gcm.Open(nil, iv, encryptedData, nil)
 	if err != nil {
