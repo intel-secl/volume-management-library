@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"intel/isecl/lib/common/pkg/vm"
-	"intel/isecl/lib/common/model"
+	"intel/isecl/lib/common/crypt"
 	"golang.org/x/sys/unix"
 	"fmt"
 	"strconv"
@@ -321,7 +321,7 @@ func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imag
 //
 func Decrypt(data, key []byte) ([]byte, error) {
 
-	var encryptionHeader model.EncryptionHeader
+	var encryptionHeader crypt.EncryptionHeader
 	fmt.Println("Key :", base64.StdEncoding.EncodeToString(key))
 	fmt.Println("decryptGCM: creating a cipher block")
 	block, err := aes.NewCipher(key)

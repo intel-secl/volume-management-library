@@ -6,5 +6,7 @@ gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190206023741-f8f931a5661
 gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190206023741-f8f931a5661f/go.mod h1:QoBuIKg0Olk/c0420oq1X87FqNfzduAA38tFMqDRU+8=
 gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190207100923-aa4601115ea2 h1:2Gi7hv/Vzoev2yskx6NGJimXeYND4nOkqgxvGYqKnBs=
 gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190207100923-aa4601115ea2/go.mod h1:QoBuIKg0Olk/c0420oq1X87FqNfzduAA38tFMqDRU+8=
+gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190207230601-50e3c52b8a4d h1:9eSY5jTBIXlBtygkz4OouNpfgLu20hmPe+cm1P9K93w=
+gitlab.devtools.intel.com/sst/isecl/lib/common v0.0.0-20190207230601-50e3c52b8a4d/go.mod h1:QoBuIKg0Olk/c0420oq1X87FqNfzduAA38tFMqDRU+8=
 golang.org/x/sys v0.0.0-20181107165924-66b7b1311ac8 h1:YoY1wS6JYVRpIfFngRf2HHo9R9dAne3xbkGOQ5rJXjU=
 golang.org/x/sys v0.0.0-20181107165924-66b7b1311ac8/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
