@@ -337,7 +337,7 @@ func Decrypt(data, key []byte) ([]byte, error) {
 		return nil, errors.New("error while creating a cipher block")
 	}
 	
-	iv := data[int(unsafe.Sizeof(encryptionHeader.OffsetInLittleEndian))+len(encryptionHeader.MagicText) : int(unsafe.Sizeof(encryptionHeader.OffsetInLittleEndian))+len(encryptionHeader.MagicText)+len(encryptionHeader.IV)]
+	iv := data[int(unsafe.Offsetof(encryptionHeader.IV)) : int(unsafe.Offsetof(encryptionHeader.IV))+int(unsafe.Sizeof(encryptionHeader.IV))]
 
 	payloadOffset := data[len(encryptionHeader.MagicText) : len(encryptionHeader.MagicText)+int(unsafe.Sizeof(encryptionHeader.OffsetInLittleEndian))]
 	offsetInInt := binary.LittleEndian.Uint32(payloadOffset)
