@@ -339,9 +339,9 @@ func Decrypt(data, key []byte) ([]byte, error) {
 	
 	iv := data[int(unsafe.Offsetof(encryptionHeader.IV)) : int(unsafe.Offsetof(encryptionHeader.IV))+int(unsafe.Sizeof(encryptionHeader.IV))]
 
-	payloadOffset := data[int(unsafe.Offsetof(encryptionHeader.OffsetInLittleEndian)) : int(unsafe.Offsetof(encryptionHeader.OffsetInLittleEndian))+int(unsafe.Sizeof(encryptionHeader.OffsetInLittleEndian))]
-	offsetInInt := binary.LittleEndian.Uint32(payloadOffset)
-	encryptedData := data[offsetInInt:]
+	offsetSlice := data[int(unsafe.Offsetof(encryptionHeader.OffsetInLittleEndian)) : int(unsafe.Offsetof(encryptionHeader.OffsetInLittleEndian))+int(unsafe.Sizeof(encryptionHeader.OffsetInLittleEndian))]
+	offsetValue := binary.LittleEndian.Uint32(offsetSlice)
+	encryptedData := data[offsetValue:]
 
 	plaintext, err := gcm.Open(nil, iv, encryptedData, nil)
 	if err != nil {
