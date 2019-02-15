@@ -4,7 +4,6 @@ package vml
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -28,11 +27,10 @@ func Mount(deviceMapperLocation string, mountLocation string) error {
 	// call syscall to mount the file system
 	err := unix.Mount(deviceMapperLocation, mountLocation, "ext4", 0, "")
 	if err != nil {
-		log.Println("Error: ", err)
 		if strings.Contains(string(err.Error()), "device or resource busy") {
 			return fmt.Errorf("device is already mounted")
 		} else {
-			return fmt.Errorf("error while trying to mount")
+			return fmt.Errorf("attempt to mount returned error : %s ", err.Error())
 		}
 	}
 	return nil
@@ -52,8 +50,7 @@ func Unmount(mountLocation string) error {
 	// call syscall to unmount the file system from the mount location
 	err := unix.Unmount(mountLocation, 0)
 	if err != nil {
-		log.Println("Error: ", err)
-		return fmt.Errorf("error while trying to unmount - function returned error : %s", err.Error())
+		return fmt.Errorf("attempt to unmount returned error : %s", err.Error())
 	}
 	return nil
 }
