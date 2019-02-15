@@ -3,7 +3,7 @@
 package vml
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"strings"
 
@@ -20,19 +20,19 @@ import (
 func Mount(deviceMapperLocation string, mountLocation string) error {
 	//input parameters validation
 	if len(strings.TrimSpace(deviceMapperLocation)) <= 0 {
-		return errors.New("device mapper location not given")
+		return fmt.Errorf("device mapper location not given")
 	}
 	if len(strings.TrimSpace(mountLocation)) <= 0 {
-		return errors.New("mount location not given")
+		return fmt.Errorf("mount location not given")
 	}
 	// call syscall to mount the file system
 	err := unix.Mount(deviceMapperLocation, mountLocation, "ext4", 0, "")
 	if err != nil {
 		log.Println("Error: ", err)
 		if strings.Contains(string(err.Error()), "device or resource busy") {
-			return errors.New("device is already mounted")
+			return fmt.Errorf("device is already mounted")
 		} else {
-			return errors.New("error while trying to mount")
+			return fmt.Errorf("error while trying to mount")
 		}
 	}
 	return nil
@@ -46,14 +46,14 @@ func Mount(deviceMapperLocation string, mountLocation string) error {
 func Unmount(mountLocation string) error {
 	//input parameters validation
 	if len(strings.TrimSpace(mountLocation)) <= 0 {
-		return errors.New("unmount location not given")
+		return fmt.Errorf("unmount location not given")
 	}
 
 	// call syscall to unmount the file system from the mount location
 	err := unix.Unmount(mountLocation, 0)
 	if err != nil {
 		log.Println("Error: ", err)
-		return errors.New("error while trying to unmount")
+		return fmt.Errorf("error while trying to unmount - function returned error : %s", err.Error())
 	}
 	return nil
 }

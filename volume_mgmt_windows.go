@@ -18,7 +18,7 @@ import "fmt"
 // 	mountLocation – Mount point location where the device will be mounted
 func Mount(deviceMapperLocation string, mountLocation string) error {
 
-	return fmt.Errorf("Function not implemented on Windows")
+	return fmt.Errorf("function not implemented on Windows")
 
 }
 
@@ -29,6 +29,6 @@ func Mount(deviceMapperLocation string, mountLocation string) error {
 // mountLocation – Mount point location  where we want to unmount the device.
 func Unmount(mountLocation string) error {
 
-	return fmt.Errorf("Function not implemented on Windows")
+	return fmt.Errorf("function not implemented on Windows")
 
 }
