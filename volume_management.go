@@ -3,18 +3,19 @@ package vml
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"encoding/base64"
+	"encoding/binary"
 	"errors"
+	"fmt"
+	"intel/isecl/lib/common/crypt"
+	"intel/isecl/lib/common/pkg/instance"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
-	"regexp"
-	"strings"
-	"intel/isecl/lib/common/pkg/vm"
-	"intel/isecl/lib/common/crypt"
-	"fmt"
 	"strconv"
-	"io/ioutil"
+	"strings"
 	"unsafe"
-	"encoding/binary"
 )
 
 // CreateVolume is used to create the sparse file if it does not exist, associate the sparse file
@@ -51,7 +52,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte
 
 	// check if device mapper of the same name exists in the given location
 	_, err = os.Stat(deviceMapperLocation)
-	if  !os.IsNotExist(err) {
+	if !os.IsNotExist(err) {
 		return errors.New("device mapper of the same already exists")
 	}
 
@@ -65,13 +66,13 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte
 	if _, err := tmpKeyFile.Write(key); err != nil {
 		return errors.New("error while writing key to a temp file")
 	}
-	
+
 	if err := tmpKeyFile.Close(); err != nil {
 		return errors.New("error closing the temp key file")
 	}
 
 	keyPath := tmpKeyFile.Name()
-	
+
 	// get loop device associated to the sparse file and format it
 	deviceLoop, formatDevice, err := getLoopDevice(sparseFilePath, diskSize, keyPath)
 	if err != nil {
@@ -210,24 +211,57 @@ func DeleteVolume(deviceMapperLocation string) error {
 // 	imageId – Image ID of the image created by the cloud orchestrator.
 //
 // 	imageEncrypted – A boolean value indicating if the image downloaded on the host by the cloud orchestrator was encrypted.
-func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (vm.Manifest, error) {
+func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (image.Manifest, error) {
 	err := validate(vmID, hostHardwareUUID, imageID)
 	if err != nil {
 		return vm.Manifest{}, fmt.Errorf("Invalid input: %s", err.Error())
 	}
 
-	vmInfo := vm.Info{}
-	vmInfo.VmID = vmID
+	vmInfo := image.Info{}
+	vmInfo.InstanceID = vmID
 	vmInfo.HostHardwareUUID = hostHardwareUUID
 	vmInfo.ImageID = imageID
 
-	manifest := vm.Manifest{}
+	manifest := image.Manifest{}
 	manifest.ImageEncrypted = imageEncrypted
-	manifest.VmInfo = vmInfo
+	manifest.ImageInfo = vmInfo
 	return manifest, nil
 }
 
-// Decrypt is used to decrypt an encrypted file with the key in 
+// CreateContainerManifest is used to create a container manifest and return a manifest.
+//
+// Input Parameters:
+//
+// 	containerId – Container instance UUID.
+//
+// 	hostHardwareUuid – Hardware UUID of the host where the container will be launched.
+//
+// 	imageId – Image ID of the container image.
+//
+// 	imageEncrypted – A boolean value indicating if the image built is encrypted.
+//
+// 	integrityEnforced - A boolean value indicating if the image is signed.
+
+func CreateContainerManifest(containerID string, hostHardwareUUID string, imageID string, imageEncrypted bool, imageIntegrityEnforced bool) (image.Manifest, error) {
+	err := validate(containerID, hostHardwareUUID, imageID)
+	if err != nil {
+		fmt.Println("Invalid input: \n", err)
+		return image.Manifest{}, err
+	}
+
+	containerInfo := image.Info{}
+	containerInfo.InstanceID = containerID
+	containerInfo.HostHardwareUUID = hostHardwareUUID
+	containerInfo.ImageID = imageID
+
+	manifest := image.Manifest{}
+	manifest.ImageEncrypted = imageEncrypted
+	manifest.ImageIntegrityEnforced = imageIntegrityEnforced
+	manifest.ImageInfo = containerInfo
+	return manifest, nil
+}
+
+// Decrypt is used to decrypt an encrypted file with the key in
 // byte format using AES 256 GCM algorithm.
 //
 // Input Parameters:
@@ -248,7 +282,7 @@ func Decrypt(data, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error while creating a cipher block: %s", err.Error())
 	}
-	
+
 	iv := data[int(unsafe.Offsetof(encryptionHeader.IV)) : int(unsafe.Offsetof(encryptionHeader.IV))+int(unsafe.Sizeof(encryptionHeader.IV))]
 
 	offsetSlice := data[int(unsafe.Offsetof(encryptionHeader.OffsetInLittleEndian)) : int(unsafe.Offsetof(encryptionHeader.OffsetInLittleEndian))+int(unsafe.Sizeof(encryptionHeader.OffsetInLittleEndian))]

@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"intel/isecl/lib/common/pkg/vm"
+	"intel/isecl/lib/common/pkg/image"
 	"intel/isecl/lib/vml"
 	"io/ioutil"
 	"os"
@@ -12,8 +12,8 @@ import (
 	"strings"
 )
 
-type vmManifest struct {
-	Manifest vm.Manifest `json:"vm_manifest"`
+type imageManifest struct {
+	Manifest image.Manifest `json:"image_manifest"`
 }
 
 func main() {
@@ -156,7 +156,33 @@ func main() {
 		}
 		isEncryptionRequiredValue, _ := strconv.ParseBool(os.Args[5])
 		createdManifest, err := vml.CreateVMManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequiredValue)
-		var manifest vmManifest
+		var manifest imageManifest
+		manifest.Manifest = createdManifest
+		if err != nil {
+			log.Println(err)
+		}
+		manifestOutput, err := serialize(manifest)
+		if err != nil {
+			log.Println(err)
+		} else {
+			log.Println(manifestOutput)
+		}
+
+	case "CreateContainerManifest":
+		log.Printf("Manifest creation method called")
+		if len(os.Args[1:]) < 6 {
+			log.Fatal("Usage :  ./lib-volume-management CreateContainerManifest containerID hostHardwareUUID imageID imageEncrypted imageIntegrityEnforced")
+		}
+		isEncryptionRequiredValue, err := strconv.ParseBool(os.Args[5])
+		if err != nil {
+			log.Fatal("Enter value (true/false) for imageEncrypted : " + err.Error())
+		}
+		isIntegrityEnforcedValue, err := strconv.ParseBool(os.Args[6])
+		if err != nil {
+			log.Fatal("Enter value (true/false) for imageIntegrityEnforced : " + err.Error())
+		}
+		createdManifest, err := vml.CreateContainerManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequiredValue, isIntegrityEnforcedValue)
+		var manifest imageManifest
 		manifest.Manifest = createdManifest
 		if err != nil {
 			fmt.Printf("Error creating the VM manifest: %s\n", err.Error())
@@ -171,13 +197,14 @@ func main() {
 		}
 
 	default:
-		fmt.Println("Invalid method name \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt")
+		log.Println("Invalid method name. \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt, CreateContainerManifest")
 	}
 }
 
-func serialize(manifest vmManifest) (string, error) {
+func serialize(manifest imageManifest) (string, error) {
 	bytes, err := json.Marshal(manifest)
 	if err != nil {
+		log.Println("Can't serialize", err)
 		return "", err
 	}
 	return string(bytes), nil
