@@ -94,6 +94,11 @@ func main() {
 
 	case "Decrypt":
 		fmt.Println("Decrypting the image file...")
+		if len(os.Args[1:]) < 4 {
+			fmt.Println("Invalid arguments")
+			fmt.Println("Usage : ",os.Args[0]," Decrypt <encryptedImagePath> <decryptionOutputFilePath> <key>")
+			os.Exit(1)
+		}
 		// input parameters validation
 		encImagePath := os.Args[2]
 		decPath := os.Args[3]
