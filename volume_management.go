@@ -4,7 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"errors"
-	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -13,7 +12,6 @@ import (
 	"intel/isecl/lib/common/crypt"
 	"fmt"
 	"strconv"
-	"encoding/base64"
 	"io/ioutil"
 	"unsafe"
 	"encoding/binary"
@@ -60,18 +58,17 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte
 
 	tmpKeyFile, err := ioutil.TempFile("/tmp", "volumeKey")
 	if err != nil {
-		log.Fatal(err)
+		return errors.New("error creating a temp key file")
 	}
 
 	defer os.Remove(tmpKeyFile.Name()) // clean up
 
 	if _, err := tmpKeyFile.Write(key); err != nil {
-		fmt.Println("error while writing key to a temp file")
 		return errors.New("error while writing key to a temp file")
 	}
 	
 	if err := tmpKeyFile.Close(); err != nil {
-		log.Fatal(err)
+		return errors.New("error closing the temp key file")
 	}
 
 	keyPath := tmpKeyFile.Name()
@@ -79,47 +76,36 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte
 	// get loop device associated to the sparse file and format it
 	deviceLoop, err = getLoopDevice(sparseFilePath, diskSize, keyPath, formatDevice)
 	if err != nil {
-		return errors.New("error while trying to get the device loop")
+		return fmt.Errorf("error while trying to get the device loop: %s", err.Error())
 	}
 
 	var deviceMapperString = strings.Split(deviceMapperLocation, "/")
 	var deviceMapperName = deviceMapperString[len(deviceMapperString)-1]
 
 	// check the status of the device device mapper
-	fmt.Println("Checking the status of the device mapper ...")
 	args = []string{"status", deviceMapperLocation}
 	cmdOutput, err = runCommand("cryptsetup", args)
 	if strings.Contains(cmdOutput, "inactive") {
-		fmt.Println("The device mapper is inactive, opening the luks volume ...")
-		// open the luks volume
-		fmt.Println("dev loop name:", deviceLoop)
-		fmt.Println("deviceMapperName:", deviceMapperName)
-		fmt.Println("keyPath:", keyPath)
 		args = []string{"-v", "luksOpen", deviceLoop, deviceMapperName, "--key-file", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
-			log.Println("Error: ", err)
-			return errors.New("error trying to open the luks volume")
+			return fmt.Errorf("error trying to open the luks volume: %s", err.Error())
 		} else {
 			formatDevice = true
 		}
 
 		//checking the status of the volume again
-		fmt.Println("Checking the status of the device mapper ... ")
 		args = []string{"status", deviceMapperLocation}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if !strings.Contains(cmdOutput, "active") {
-			log.Println("Error: ", err)
 			return errors.New("volume is not active for use")
 		}
 	}
 	// 9. format the volume
-	fmt.Println("Formatting the dm-crypt volume ...")
 	if formatDevice {
 		args = []string{"-v", deviceMapperLocation}
 		cmdOutput, err = runCommand("mkfs.ext4", args)
 		if err != nil {
-			log.Println("Error: ", err)
 			return errors.New("error trying to format the luks volume")
 		}
 	}
@@ -134,15 +120,12 @@ func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDe
 	var deviceLoop string
 
 	// check if the sparse file exists
-	fmt.Println("Checking if the sparse file exists ... ")
 	fileInfo, err := os.Stat(sparseFilePath)
 	var fileSizeMatches = false
 
 	// if sparse file exists, check if the file size matches the given disk size
 	if !os.IsNotExist(err) {
 		diskSizeInBytes := diskSize * 1000000000
-		fmt.Println("The file size %d:", fileInfo.Size())
-		fmt.Println("The given disk size %d", diskSizeInBytes)
 		if int64(diskSizeInBytes) == fileInfo.Size() {
 			fileSizeMatches = true
 		}
@@ -150,35 +133,28 @@ func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDe
 
 	// sparse file does not exist, creating a new sparsefile
 	if (os.IsNotExist(err)) || !fileSizeMatches {
-		fmt.Println("Sparse file does not exist, creating a new file")
 		// create a sparse file
 		size := strconv.Itoa(diskSize) + "GB"
 		args = []string{"-s", size, sparseFilePath}
 		_, err = runCommand("truncate", args)
 		if err != nil {
-			log.Println("Error: ", err)
-			return "", errors.New("error creating a sparse file")
+			return "", fmt.Errorf("error creating a sparse file: ", err.Error())
 		}
 		formatDevice = true
 	} 
-	fmt.Println("Sparse file exists in location ", sparseFilePath)
 
 	// find the loop device associated to the sparse file
-	fmt.Println("Finding a loop device that is associated to the sparse file ...")
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err := runCommand("losetup", args)
 	if err != nil {
-		log.Println("Error: ", err)
 		return "", errors.New("error trying to find a loop device associated with the sparse file")
 	}
 	// find the loop device and associate it with the sparse file
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
-		fmt.Println("Associating a loop device to the sparse file ...")
 		// find the loop device
 		args = []string{"-f", sparseFilePath}
 		cmdOutput, err = runCommand("losetup", args)
 		if err != nil {
-			log.Println("Error: ", err)
 			return "", errors.New("error trying to accociate a loop device to the sparse file")
 		}
 	}
@@ -191,17 +167,14 @@ func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDe
 	} else {
 		var modifiedOutput = strings.Split(cmdOutput, ":")
 		deviceLoop = modifiedOutput[0]
-		fmt.Println("The sparse file is associated to the loop device ", deviceLoop)
 	}
 
 	// format loop device
 	if formatDevice {
-		fmt.Println("Formatting the loop device ...")
 		args = []string{"-v", "--batch-mode", "luksFormat", deviceLoop, "--key-file", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
-			log.Println("Error: ", err)
-			return "", errors.New("error trying to format the loop device")
+			return "", fmt.Errorf("error trying to format the loop device: %s", err.Error())
 		}
 	}
 	return deviceLoop, nil
@@ -219,13 +192,11 @@ func DeleteVolume(deviceMapperLocation string) error {
 	}
 
 	// build and excute the cryptsetup luksClose command to close and delete the volume
-	fmt.Println("Deleting the dm-crypt volume ...")
 	deleteVolumeCmd := "cryptsetup"
 	args := []string{"luksClose", deviceMapperLocation}
 	_, err := runCommand(deleteVolumeCmd, args)
 	if err != nil {
-		log.Println("Error: ", err)
-		return errors.New("error trying to close the device mapper")
+		return fmt.Errorf("error trying to close the device mapper: %s", err.Error())
 	}
 	return nil
 }
@@ -244,8 +215,7 @@ func DeleteVolume(deviceMapperLocation string) error {
 func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (vm.Manifest, error) {
 	err := validate(vmID, hostHardwareUUID, imageID)
 	if err != nil {
-		fmt.Println("Invalid input: \n", err)
-		return vm.Manifest{}, err
+		return vm.Manifest{}, fmt.Errorf("Invalid input: %s", err.Error())
 	}
 
 	vmInfo := vm.Info{}
@@ -271,19 +241,14 @@ func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imag
 func Decrypt(data, key []byte) ([]byte, error) {
 
 	var encryptionHeader crypt.EncryptionHeader
-	fmt.Println("Key :", base64.StdEncoding.EncodeToString(key))
-	fmt.Println("decryptGCM: creating a cipher block")
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Println("Error: ", err)
-		return nil, errors.New("error while creating the cipher")
+		return nil, fmt.Errorf("error while creating the cipher: %s", err.Error())
 	}
 
-	fmt.Println("decryptGCM: getting gcm object")
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Println("Error: ", err)
-		return nil, errors.New("error while creating a cipher block")
+		return nil, fmt.Errorf("error while creating a cipher block: %s", err.Error())
 	}
 	
 	iv := data[int(unsafe.Offsetof(encryptionHeader.IV)) : int(unsafe.Offsetof(encryptionHeader.IV))+int(unsafe.Sizeof(encryptionHeader.IV))]
@@ -294,8 +259,7 @@ func Decrypt(data, key []byte) ([]byte, error) {
 
 	plaintext, err := gcm.Open(nil, iv, encryptedData, nil)
 	if err != nil {
-		log.Println("Error: ", err)
-		return nil, errors.New("error while decrypting the file")
+		return nil, fmt.Errorf("error while decrypting the file: %s", err.Error())
 	}
 	return plaintext, nil
 }

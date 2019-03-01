@@ -7,7 +7,6 @@ import (
 	"intel/isecl/lib/common/pkg/vm"
 	"intel/isecl/lib/vml"
 	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -20,143 +19,160 @@ type vmManifest struct {
 func main() {
 
 	if len(os.Args[0:]) < 2 {
-		log.Fatal("Usage :  ./lib-volume-management <methodname> <parameters>")
+		fmt.Println("Usage : ",os.Args[0], "<methodname> <parameters>")
+		os.Exit(1)
 	}
 	var methodName = os.Args[1]
 	var err error
 
 	switch methodName {
 	case "CreateVolume":
-		log.Printf("Create volume method called")
+		fmt.Println("Creating dm-crypt volume...")
 		if len(os.Args[1:]) < 5 {
-			log.Fatal("Usage :  ./lib-volume-management CreateVolume sparseFilePath deviceMapperLocation keyFile diskSize")
-		}
-		size, _ := strconv.Atoi(os.Args[5])
-		key, err := hex.DecodeString(os.Args[4])
-		if err != nil {
-			log.Println("Invalid hex format for the key")
+			fmt.Println("Invalid arguments")
+			fmt.Println("Usage : ",os.Args[0]," CreateVolume sparseFilePath deviceMapperLocation key diskSize")
+			os.Exit(1)
 		}
 
-		err = vml.CreateVolume(os.Args[2], os.Args[3], key, size)
+		key, err := hex.DecodeString(os.Args[4])
 		if err != nil {
-			log.Println(err)
+			fmt.Println("Invalid hex format for the key")
+			os.Exit(1)
+		}
+
+		size, _ := strconv.Atoi(os.Args[5])
+		if err = vml.CreateVolume(os.Args[2], os.Args[3], key, size); err != nil {
+			fmt.Printf("Error creating the dm-crypt volume: %s\n", err.Error())
+			os.Exit(1)
 		} else {
-			log.Printf("Volume created successfully in %s\n", os.Args[3])
+			fmt.Printf("Volume created successfully in %s\n", os.Args[3])
+			os.Exit(0)
 		}
 
 	case "DeleteVolume":
-		log.Printf("Delete volume method called")
+		fmt.Println("Deleting dm-crypt volume...")
 		if len(os.Args[1:]) < 2 {
-			log.Fatal("Usage :  ./lib-volume-management DeleteVolume deviceMapperLocation")
+			fmt.Println("Invalid arguments")
+			fmt.Println("Usage : ",os.Args[0]," DeleteVolume deviceMapperLocation")
 		}
-		err = vml.DeleteVolume(os.Args[2])
-		if err != nil {
-			log.Println(err)
+		if err = vml.DeleteVolume(os.Args[2]); err != nil {
+			fmt.Printf("Error deleting the dm-crypt volume: %s\n", err.Error())
+			os.Exit(1)
 		} else {
-			log.Printf("Volume %s deleted successfully\n", os.Args[2])
+			fmt.Printf("Successfully deleted dm-crypt volume: %s\n", os.Args[2])
+			os.Exit(0)
 		}
 
 	case "Mount":
-		log.Printf("Mount method called")
+		fmt.Println("Mounting the device...")
 		if len(os.Args[1:]) < 3 {
-			log.Fatal("Usage :  ./lib-volume-management Mount deviceMapperLocation mountlocation")
+			fmt.Println("Invalid arguments")
+			fmt.Println("Usage : ",os.Args[0]," Mount deviceMapperLocation mountlocation")
+			os.Exit(1)
 		}
-		err = vml.Mount(os.Args[2], os.Args[3])
-		if err != nil {
-			log.Println(err)
-		} else {
-			log.Printf("Mount Successful\n")
+		if err = vml.Mount(os.Args[2], os.Args[3]); err != nil {
+			fmt.Printf("Error mounting the device: %s\n", err.Error())
+			os.Exit(1)
 		}
+		fmt.Printf("Device mounted successfully in %s\n", os.Args[3])
+		os.Exit(0)
 
 	case "Unmount":
-		log.Printf("Unmount method called")
+		fmt.Println("Unmounting the device...")
 		if len(os.Args[1:]) < 2 {
-			log.Fatal("Usage :  ./lib-volume-management Unmount mountlocation")
+			fmt.Println("Invalid arguments")
+			fmt.Println("Usage : ",os.Args[0]," Unmount mountlocation")
+			os.Exit(1)
 		}
 		err = vml.Unmount(os.Args[2])
 		if err != nil {
-			log.Println(err)
-		} else {
-			log.Printf("Unmount Successful\n")
+			fmt.Printf("Error unmounting the device: %s\n", err.Error())
+			os.Exit(1)
 		}
+		fmt.Printf("Unmounted %s successfully\n", os.Args[2])
+		os.Exit(0)
 
 	case "Decrypt":
-		log.Printf("Decrypt method called")
-
+		fmt.Println("Decrypting the image file...")
 		// input parameters validation
 		encImagePath := os.Args[2]
 		decPath := os.Args[3]
 		key, err := hex.DecodeString(os.Args[4])
 		if err != nil {
-			log.Println("Invalid hex format for the key")
+			fmt.Println("Invalid hex format for the key")
+			os.Exit(1)
 		}
 		if len(strings.TrimSpace(encImagePath)) <= 0 {
-			log.Println("Encrypted file path is not given")
-			log.Fatal("Usage :  ./lib-volume-management Decrypt encFilePath decFilePath keyPath")
+			fmt.Println("Encrypted file path is not given")
+			fmt.Println("Usage : ",os.Args[0]," Decrypt encFilePath decFilePath keyPath")
+			os.Exit(1)
 		}
 
 		if len(strings.TrimSpace(decPath)) <= 0 {
-			log.Println("Path to save the decrypted file is not given")
-			log.Fatal("Usage :  ./lib-volume-management Decrypt encFilePath decFilePath keyPath")
+			fmt.Println("Path to save the decrypted file is not given")
+			fmt.Println("Usage : ",os.Args[0]," Decrypt encFilePath decFilePath keyPath")
+			os.Exit(1)
 		}
-
-		fmt.Println("enc image path: ", encImagePath)
-		fmt.Println("decPath:", decPath)
 
 		// check if encrypted image file exists
 		_, err = os.Stat(encImagePath)
 		if os.IsNotExist(err) {
-			log.Fatal("encrypted file does not exist")
+			fmt.Println("Encrypted file does not exist")
+			os.Exit(1)
 		}
-
-		fmt.Println("enc image exists ", encImagePath)
 
 		// read the encrypted file
 		encryptedData, err := ioutil.ReadFile(encImagePath)
 		if err != nil {
-			log.Fatal("error while reading the image")
+			fmt.Println("Error while reading the image file")
+			os.Exit(1)
 		}
 
 		decryptedData, err := vml.Decrypt(encryptedData, key)
 		if err != nil {
-			log.Println(err)
-		} else {
-			log.Printf("File decrypted successfully")
+			fmt.Printf("Error decrypting the image: %s\n", err.Error())
+			os.Exit(1)
 		}
+		fmt.Println("Image file decrypted successfully")
 		//Save to file
-		err = ioutil.WriteFile(decPath, decryptedData, 0600)
-		if err != nil {
-			log.Fatal("error during writing to file")
+		if err = ioutil.WriteFile(decPath, decryptedData, 0600); err != nil {
+			fmt.Printf("Error during writing to file: %s\n", err.Error())
+			os.Exit(1)
 		}
+		fmt.Printf("Decrypted image will be found in: %s\n", decPath)
+		os.Exit(0)
 
 	case "CreateVMManifest":
-		log.Printf("Manifest creation method called")
+		fmt.Println("Creating VM manifest...")
 		if len(os.Args[1:]) < 5 {
-			log.Fatal("Usage :  ./lib-volume-management CreateVMManifest vmID hostHardwareUUID imageID imageEncrypted")
+			fmt.Println("Invalid arguments")
+			fmt.Println("Usage : ",os.Args[0]," vmID hostHardwareUUID imageID imageEncrypted")
+			os.Exit(1)
 		}
 		isEncryptionRequiredValue, _ := strconv.ParseBool(os.Args[5])
 		createdManifest, err := vml.CreateVMManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequiredValue)
 		var manifest vmManifest
 		manifest.Manifest = createdManifest
 		if err != nil {
-			log.Println(err)
+			fmt.Printf("Error creating the VM manifest: %s\n", err.Error())
+			os.Exit(1)
 		}
-		manifestOutput, err := serialize(manifest)
-		if err != nil {
-			log.Println(err)
+		if manifestOutput, err := serialize(manifest); err != nil {
+			fmt.Printf("Error serializing manifest output")
+			os.Exit(1)
 		} else {
-			log.Println(manifestOutput)
+			fmt.Println(manifestOutput)
+			os.Exit(0)
 		}
 
 	default:
-		log.Println("Invalid method name. \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt")
+		fmt.Println("Invalid method name \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt")
 	}
 }
 
 func serialize(manifest vmManifest) (string, error) {
 	bytes, err := json.Marshal(manifest)
 	if err != nil {
-		log.Println("Can't serislize", err)
 		return "", err
 	}
 	return string(bytes), nil
