@@ -31,7 +31,6 @@ import (
 //
 // 	diskSize – Size of the sparse file to be created.
 func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte, diskSize int) error {
-	var formatDevice = false
 	var args []string
 	var deviceLoop string
 	var cmdOutput string
@@ -74,7 +73,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte
 	keyPath := tmpKeyFile.Name()
 	
 	// get loop device associated to the sparse file and format it
-	deviceLoop, err = getLoopDevice(sparseFilePath, diskSize, keyPath, formatDevice)
+	deviceLoop, formatDevice, err := getLoopDevice(sparseFilePath, diskSize, keyPath)
 	if err != nil {
 		return fmt.Errorf("error while trying to get the device loop: %s", err.Error())
 	}
@@ -89,9 +88,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte
 		args = []string{"-v", "luksOpen", deviceLoop, deviceMapperName, "--key-file", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
-			return fmt.Errorf("error trying to open the luks volume: %s", err.Error())
-		} else {
-			formatDevice = true
+			return errors.New("error trying to open the luks volume")
 		}
 
 		//checking the status of the volume again
@@ -103,6 +100,7 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte
 	}
 	// 9. format the volume
 	if formatDevice {
+		fmt.Println("Formatting the dm-crypt volume ...")
 		args = []string{"-v", deviceMapperLocation}
 		cmdOutput, err = runCommand("mkfs.ext4", args)
 		if err != nil {
@@ -114,10 +112,11 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte
 
 // This function is used to create a sparse file is it doesn't exist,
 // find a loop device and associate the sparse file with it.
-func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDevice bool) (string, error) {
+func getLoopDevice(sparseFilePath string, diskSize int, keyPath string) (string, bool, error) {
 	var err error
 	var args []string
 	var deviceLoop string
+	var formatDevice = false
 
 	// check if the sparse file exists
 	fileInfo, err := os.Stat(sparseFilePath)
@@ -138,7 +137,7 @@ func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDe
 		args = []string{"-s", size, sparseFilePath}
 		_, err = runCommand("truncate", args)
 		if err != nil {
-			return "", fmt.Errorf("error creating a sparse file: ", err.Error())
+			return "", false, fmt.Errorf("error creating a sparse file: ", err.Error())
 		}
 		formatDevice = true
 	} 
@@ -147,7 +146,7 @@ func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDe
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err := runCommand("losetup", args)
 	if err != nil {
-		return "", errors.New("error trying to find a loop device associated with the sparse file")
+		return "", false, errors.New("error trying to find a loop device associated with the sparse file")
 	}
 	// find the loop device and associate it with the sparse file
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
@@ -155,7 +154,7 @@ func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDe
 		args = []string{"-f", sparseFilePath}
 		cmdOutput, err = runCommand("losetup", args)
 		if err != nil {
-			return "", errors.New("error trying to accociate a loop device to the sparse file")
+			return "", false, errors.New("error trying to accociate a loop device to the sparse file")
 		}
 	}
 
@@ -163,7 +162,7 @@ func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDe
 	args = []string{"-j", sparseFilePath}
 	cmdOutput, err = runCommand("losetup", args)
 	if (cmdOutput == "") || (len(cmdOutput) <= 0) {
-		return "", errors.New("sparse file is not associated to the loop device")
+		return "", false, errors.New("sparse file is not associated to the loop device")
 	} else {
 		var modifiedOutput = strings.Split(cmdOutput, ":")
 		deviceLoop = modifiedOutput[0]
@@ -174,10 +173,10 @@ func getLoopDevice(sparseFilePath string, diskSize int, keyPath string, formatDe
 		args = []string{"-v", "--batch-mode", "luksFormat", deviceLoop, "--key-file", keyPath}
 		cmdOutput, err = runCommand("cryptsetup", args)
 		if err != nil {
-			return "", fmt.Errorf("error trying to format the loop device: %s", err.Error())
+			return "", false, fmt.Errorf("error trying to format the loop device: %s", err.Error())
 		}
 	}
-	return deviceLoop, nil
+	return deviceLoop, formatDevice, nil
 }
 
 // DeleteVolume method is used to delete the given dm-crypt volume.
