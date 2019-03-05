@@ -100,7 +100,6 @@ func CreateVolume(sparseFilePath string, deviceMapperLocation string, key []byte
 	}
 	// 9. format the volume
 	if formatDevice {
-		fmt.Println("Formatting the dm-crypt volume ...")
 		args = []string{"-v", deviceMapperLocation}
 		cmdOutput, err = runCommand("mkfs.ext4", args)
 		if err != nil {
