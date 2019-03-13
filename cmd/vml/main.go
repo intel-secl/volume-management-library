@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"intel/isecl/lib/common/pkg/image"
+	"intel/isecl/lib/common/pkg/instance"
 	"intel/isecl/lib/vml"
 	"io/ioutil"
 	"os"
@@ -12,8 +12,8 @@ import (
 	"strings"
 )
 
-type imageManifest struct {
-	Manifest image.Manifest `json:"image_manifest"`
+type instanceManifest struct {
+	Manifest instance.Manifest `json:"instance_manifest"`
 }
 
 func main() {
@@ -156,7 +156,7 @@ func main() {
 		}
 		isEncryptionRequiredValue, _ := strconv.ParseBool(os.Args[5])
 		createdManifest, err := vml.CreateVMManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequiredValue)
-		var manifest imageManifest
+		var manifest instanceManifest
 		manifest.Manifest = createdManifest
 		if err != nil {
 			log.Println(err)
@@ -182,7 +182,7 @@ func main() {
 			log.Fatal("Enter value (true/false) for imageIntegrityEnforced : " + err.Error())
 		}
 		createdManifest, err := vml.CreateContainerManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequiredValue, isIntegrityEnforcedValue)
-		var manifest imageManifest
+		var manifest instanceManifest
 		manifest.Manifest = createdManifest
 		if err != nil {
 			fmt.Printf("Error creating the VM manifest: %s\n", err.Error())
@@ -201,7 +201,7 @@ func main() {
 	}
 }
 
-func serialize(manifest imageManifest) (string, error) {
+func serialize(manifest instanceManifest) (string, error) {
 	bytes, err := json.Marshal(manifest)
 	if err != nil {
 		log.Println("Can't serialize", err)

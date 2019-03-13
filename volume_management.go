@@ -211,20 +211,20 @@ func DeleteVolume(deviceMapperLocation string) error {
 // 	imageId – Image ID of the image created by the cloud orchestrator.
 //
 // 	imageEncrypted – A boolean value indicating if the image downloaded on the host by the cloud orchestrator was encrypted.
-func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (image.Manifest, error) {
+func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (instance.Manifest, error) {
 	err := validate(vmID, hostHardwareUUID, imageID)
 	if err != nil {
 		return vm.Manifest{}, fmt.Errorf("Invalid input: %s", err.Error())
 	}
 
-	vmInfo := image.Info{}
+	vmInfo := instance.Info{}
 	vmInfo.InstanceID = vmID
 	vmInfo.HostHardwareUUID = hostHardwareUUID
 	vmInfo.ImageID = imageID
 
-	manifest := image.Manifest{}
+	manifest := instance.Manifest{}
 	manifest.ImageEncrypted = imageEncrypted
-	manifest.ImageInfo = vmInfo
+	manifest.InstanceInfo = vmInfo
 	return manifest, nil
 }
 
@@ -249,15 +249,15 @@ func CreateContainerManifest(containerID string, hostHardwareUUID string, imageI
 		return image.Manifest{}, err
 	}
 
-	containerInfo := image.Info{}
+	containerInfo := instance.Info{}
 	containerInfo.InstanceID = containerID
 	containerInfo.HostHardwareUUID = hostHardwareUUID
 	containerInfo.ImageID = imageID
 
-	manifest := image.Manifest{}
+	manifest := instance.Manifest{}
 	manifest.ImageEncrypted = imageEncrypted
 	manifest.ImageIntegrityEnforced = imageIntegrityEnforced
-	manifest.ImageInfo = containerInfo
+	manifest.InstanceInfo = containerInfo
 	return manifest, nil
 }
 
