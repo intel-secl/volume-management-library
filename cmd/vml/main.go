@@ -159,29 +159,32 @@ func main() {
 		var manifest instanceManifest
 		manifest.Manifest = createdManifest
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 		}
 		manifestOutput, err := serialize(manifest)
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 		} else {
-			log.Println(manifestOutput)
+			fmt.Println(manifestOutput)
 		}
 
 	case "CreateContainerManifest":
-		log.Printf("Manifest creation method called")
+		fmt.Printf("Manifest creation method called")
 		if len(os.Args[1:]) < 6 {
-			log.Fatal("Usage :  ./lib-volume-management CreateContainerManifest containerID hostHardwareUUID imageID imageEncrypted imageIntegrityEnforced")
+			fmt.Println("Usage :  os.Args[0] CreateContainerManifest containerID hostHardwareUUID imageID imageEncrypted imageIntegrityEnforced")
+                        os.Exit(1)
 		}
-		isEncryptionRequiredValue, err := strconv.ParseBool(os.Args[5])
+		isEncryptionRequired, err := strconv.ParseBool(os.Args[5])
 		if err != nil {
-			log.Fatal("Enter value (true/false) for imageEncrypted : " + err.Error())
+			fmt.Println("Enter value (true/false) for imageEncrypted : " + err.Error())
+                        os.Exit(1)
 		}
-		isIntegrityEnforcedValue, err := strconv.ParseBool(os.Args[6])
+		isIntegrityEnforced, err := strconv.ParseBool(os.Args[6])
 		if err != nil {
-			log.Fatal("Enter value (true/false) for imageIntegrityEnforced : " + err.Error())
+			fmt.Printf("Enter value (true/false) for imageIntegrityEnforced : " + err.Error())
+                        os.Exit(1)
 		}
-		createdManifest, err := vml.CreateContainerManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequiredValue, isIntegrityEnforcedValue)
+		createdManifest, err := vml.CreateContainerManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequired, isIntegrityEnforced)
 		var manifest instanceManifest
 		manifest.Manifest = createdManifest
 		if err != nil {
