@@ -3,16 +3,15 @@ package vml
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"intel/isecl/lib/common/crypt"
 	"intel/isecl/lib/common/pkg/instance"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -140,7 +139,7 @@ func getLoopDevice(sparseFilePath string, diskSize int, keyPath string) (string,
 			return "", false, fmt.Errorf("error creating a sparse file: ", err.Error())
 		}
 		formatDevice = true
-	} 
+	}
 
 	// find the loop device associated to the sparse file
 	args = []string{"-j", sparseFilePath}
@@ -214,7 +213,7 @@ func DeleteVolume(deviceMapperLocation string) error {
 func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (instance.Manifest, error) {
 	err := validate(vmID, hostHardwareUUID, imageID)
 	if err != nil {
-		return vm.Manifest{}, fmt.Errorf("Invalid input: %s", err.Error())
+		return instance.Manifest{}, fmt.Errorf("Invalid input: %s", err.Error())
 	}
 
 	vmInfo := instance.Info{}
@@ -241,12 +240,10 @@ func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imag
 // 	imageEncrypted – A boolean value indicating if the image built is encrypted.
 //
 // 	integrityEnforced - A boolean value indicating if the image is signed.
-
-func CreateContainerManifest(containerID string, hostHardwareUUID string, imageID string, imageEncrypted bool, imageIntegrityEnforced bool) (image.Manifest, error) {
+func CreateContainerManifest(containerID, hostHardwareUUID, imageID string, imageEncrypted, imageIntegrityEnforced bool) (instance.Manifest, error) {
 	err := validate(containerID, hostHardwareUUID, imageID)
 	if err != nil {
-		fmt.Println("Invalid input: \n", err)
-		return image.Manifest{}, err
+		return instance.Manifest{}, fmt.Errorf("Invalid input: %s", err.Error())
 	}
 
 	containerInfo := instance.Info{}

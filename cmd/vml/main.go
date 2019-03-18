@@ -19,7 +19,7 @@ type instanceManifest struct {
 func main() {
 
 	if len(os.Args[0:]) < 2 {
-		fmt.Println("Usage : ",os.Args[0], "<methodname> <parameters>")
+		fmt.Println("Usage : ", os.Args[0], "<methodname> <parameters>")
 		os.Exit(1)
 	}
 	var methodName = os.Args[1]
@@ -30,7 +30,7 @@ func main() {
 		fmt.Println("Creating dm-crypt volume...")
 		if len(os.Args[1:]) < 5 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ",os.Args[0]," CreateVolume sparseFilePath deviceMapperLocation key diskSize")
+			fmt.Println("Usage : ", os.Args[0], " CreateVolume sparseFilePath deviceMapperLocation key diskSize")
 			os.Exit(1)
 		}
 
@@ -53,7 +53,7 @@ func main() {
 		fmt.Println("Deleting dm-crypt volume...")
 		if len(os.Args[1:]) < 2 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ",os.Args[0]," DeleteVolume deviceMapperLocation")
+			fmt.Println("Usage : ", os.Args[0], " DeleteVolume deviceMapperLocation")
 		}
 		if err = vml.DeleteVolume(os.Args[2]); err != nil {
 			fmt.Printf("Error deleting the dm-crypt volume: %s\n", err.Error())
@@ -67,7 +67,7 @@ func main() {
 		fmt.Println("Mounting the device...")
 		if len(os.Args[1:]) < 3 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ",os.Args[0]," Mount deviceMapperLocation mountlocation")
+			fmt.Println("Usage : ", os.Args[0], " Mount deviceMapperLocation mountlocation")
 			os.Exit(1)
 		}
 		if err = vml.Mount(os.Args[2], os.Args[3]); err != nil {
@@ -81,7 +81,7 @@ func main() {
 		fmt.Println("Unmounting the device...")
 		if len(os.Args[1:]) < 2 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ",os.Args[0]," Unmount mountlocation")
+			fmt.Println("Usage : ", os.Args[0], " Unmount mountlocation")
 			os.Exit(1)
 		}
 		err = vml.Unmount(os.Args[2])
@@ -96,7 +96,7 @@ func main() {
 		fmt.Println("Decrypting the image file...")
 		if len(os.Args[1:]) < 4 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ",os.Args[0]," Decrypt <encryptedImagePath> <decryptionOutputFilePath> <key>")
+			fmt.Println("Usage : ", os.Args[0], " Decrypt <encryptedImagePath> <decryptionOutputFilePath> <key>")
 			os.Exit(1)
 		}
 		// input parameters validation
@@ -109,13 +109,13 @@ func main() {
 		}
 		if len(strings.TrimSpace(encImagePath)) <= 0 {
 			fmt.Println("Encrypted file path is not given")
-			fmt.Println("Usage : ",os.Args[0]," Decrypt encFilePath decFilePath keyPath")
+			fmt.Println("Usage : ", os.Args[0], " Decrypt encFilePath decFilePath keyPath")
 			os.Exit(1)
 		}
 
 		if len(strings.TrimSpace(decPath)) <= 0 {
 			fmt.Println("Path to save the decrypted file is not given")
-			fmt.Println("Usage : ",os.Args[0]," Decrypt encFilePath decFilePath keyPath")
+			fmt.Println("Usage : ", os.Args[0], " Decrypt encFilePath decFilePath keyPath")
 			os.Exit(1)
 		}
 
@@ -151,7 +151,7 @@ func main() {
 		fmt.Println("Creating VM manifest...")
 		if len(os.Args[1:]) < 5 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ",os.Args[0]," vmID hostHardwareUUID imageID imageEncrypted")
+			fmt.Println("Usage : ", os.Args[0], " vmID hostHardwareUUID imageID imageEncrypted")
 			os.Exit(1)
 		}
 		isEncryptionRequiredValue, _ := strconv.ParseBool(os.Args[5])
@@ -200,7 +200,7 @@ func main() {
 		}
 
 	default:
-		log.Println("Invalid method name. \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt, CreateContainerManifest")
+		fmt.Println("Invalid method name \nExpected values: CreateVolume, DeleteVolume, Mount, Unmount, CreateVMManifest, Decrypt, CreateContainerManifest")
 	}
 }
 
