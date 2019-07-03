@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -211,10 +210,6 @@ func DeleteVolume(deviceMapperLocation string) error {
 //
 // 	imageEncrypted – A boolean value indicating if the image downloaded on the host by the cloud orchestrator was encrypted.
 func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imageEncrypted bool) (instance.Manifest, error) {
-	err := validate(vmID, hostHardwareUUID, imageID)
-	if err != nil {
-		return instance.Manifest{}, fmt.Errorf("Invalid input: %s", err.Error())
-	}
 
 	vmInfo := instance.Info{}
 	vmInfo.InstanceID = vmID
@@ -241,10 +236,6 @@ func CreateVMManifest(vmID string, hostHardwareUUID string, imageID string, imag
 //
 // 	integrityEnforced - A boolean value indicating if the image is signed.
 func CreateContainerManifest(containerID, hostHardwareUUID, imageID string, imageEncrypted, imageIntegrityEnforced bool) (instance.Manifest, error) {
-	err := validate(containerID, hostHardwareUUID, imageID)
-	if err != nil {
-		return instance.Manifest{}, fmt.Errorf("Invalid input: %s", err.Error())
-	}
 
 	containerInfo := instance.Info{}
 	containerInfo.InstanceID = containerID
@@ -296,23 +287,4 @@ func Decrypt(data, key []byte) ([]byte, error) {
 func runCommand(cmd string, args []string) (string, error) {
 	out, err := exec.Command(cmd, args...).Output()
 	return string(out), err
-}
-
-func isValidUUID(uuid string) bool {
-	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
-	return r.MatchString(uuid)
-}
-
-func validate(vmID string, hostHardwareUUID string, imageID string) error {
-	if !isValidUUID(vmID) {
-		return errors.New("the VM ID provided is invalid")
-	}
-	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$")
-	if !r.MatchString(hostHardwareUUID) {
-		return errors.New("the host hardware UUID provided is invalid")
-	}
-	if !isValidUUID(imageID) {
-		return errors.New("the image ID provided is invalid")
-	}
-	return nil
 }

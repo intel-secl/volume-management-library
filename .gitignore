@@ -2,3 +2,4 @@
 *.exe
 *.html
 lib-volume-management
+go.sum

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"intel/isecl/lib/common/pkg/instance"
+	"intel/isecl/lib/common/validation"
 	"intel/isecl/lib/vml"
 	"io/ioutil"
 	"os"
@@ -30,7 +31,18 @@ func main() {
 		fmt.Println("Creating dm-crypt volume...")
 		if len(os.Args[1:]) < 5 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ", os.Args[0], " CreateVolume sparseFilePath deviceMapperLocation key diskSize")
+			fmt.Printf("Usage : %s CreateVolume sparseFilePath deviceMapperLocation key diskSize\n", os.Args[0])
+			os.Exit(1)
+		}
+
+		inputArr := []string{os.Args[2], os.Args[3], os.Args[5]}
+		if validateInputErr := validation.ValidateStrings(inputArr); validateInputErr != nil {
+			fmt.Println("Invalid string format")
+			os.Exit(1)
+		}
+
+		if validateHexStringErr := validation.ValidateHexString(os.Args[4]); validateHexStringErr != nil {
+			fmt.Println("Invalid hex format for the key")
 			os.Exit(1)
 		}
 
@@ -53,8 +65,15 @@ func main() {
 		fmt.Println("Deleting dm-crypt volume...")
 		if len(os.Args[1:]) < 2 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ", os.Args[0], " DeleteVolume deviceMapperLocation")
+			fmt.Printf("Usage : %s DeleteVolume deviceMapperLocation\n", os.Args[0])
 		}
+
+		inputArr := []string{os.Args[2]}
+		if validateInputErr := validation.ValidateStrings(inputArr); validateInputErr != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
 		if err = vml.DeleteVolume(os.Args[2]); err != nil {
 			fmt.Printf("Error deleting the dm-crypt volume: %s\n", err.Error())
 			os.Exit(1)
@@ -67,9 +86,16 @@ func main() {
 		fmt.Println("Mounting the device...")
 		if len(os.Args[1:]) < 3 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ", os.Args[0], " Mount deviceMapperLocation mountlocation")
+			fmt.Printf("Usage : %s Mount deviceMapperLocation mountlocation\n", os.Args[0])
 			os.Exit(1)
 		}
+
+		inputArr := []string{os.Args[2], os.Args[3]}
+		if validateInputErr := validation.ValidateStrings(inputArr); validateInputErr != nil {
+			fmt.Println("Invalid stting format")
+			os.Exit(1)
+		}
+
 		if err = vml.Mount(os.Args[2], os.Args[3]); err != nil {
 			fmt.Printf("Error mounting the device: %s\n", err.Error())
 			os.Exit(1)
@@ -81,9 +107,16 @@ func main() {
 		fmt.Println("Unmounting the device...")
 		if len(os.Args[1:]) < 2 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ", os.Args[0], " Unmount mountlocation")
+			fmt.Printf("Usage : %s Unmount mountlocation\n", os.Args[0])
 			os.Exit(1)
 		}
+
+		inputArr := []string{os.Args[2]}
+		if validateInputErr := validation.ValidateStrings(inputArr); validateInputErr != nil {
+			fmt.Println("Invalid mount location string format")
+			os.Exit(1)
+		}
+
 		err = vml.Unmount(os.Args[2])
 		if err != nil {
 			fmt.Printf("Error unmounting the device: %s\n", err.Error())
@@ -96,26 +129,38 @@ func main() {
 		fmt.Println("Decrypting the image file...")
 		if len(os.Args[1:]) < 4 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ", os.Args[0], " Decrypt <encryptedImagePath> <decryptionOutputFilePath> <key>")
+			fmt.Printf("Usage : %s Decrypt <encryptedImagePath> <decryptionOutputFilePath> <key>\n", os.Args[0])
 			os.Exit(1)
 		}
 		// input parameters validation
 		encImagePath := os.Args[2]
 		decPath := os.Args[3]
+
+		inputArr := []string{encImagePath, decPath}
+		if validateInputErr := validation.ValidateStrings(inputArr); validateInputErr != nil {
+			fmt.Println("Invalid string format")
+			os.Exit(1)
+		}
+
+		if validateHexStringErr := validation.ValidateHexString(os.Args[4]); validateHexStringErr != nil {
+			fmt.Println("Invalid hex format for the key")
+			os.Exit(1)
+		}
+
 		key, err := hex.DecodeString(os.Args[4])
 		if err != nil {
-			fmt.Println("Invalid hex format for the key")
+			fmt.Println("Error while decoding hex string")
 			os.Exit(1)
 		}
 		if len(strings.TrimSpace(encImagePath)) <= 0 {
 			fmt.Println("Encrypted file path is not given")
-			fmt.Println("Usage : ", os.Args[0], " Decrypt encFilePath decFilePath keyPath")
+			fmt.Printf("Usage : %s Decrypt encFilePath decFilePath keyPath\n", os.Args[0])
 			os.Exit(1)
 		}
 
 		if len(strings.TrimSpace(decPath)) <= 0 {
 			fmt.Println("Path to save the decrypted file is not given")
-			fmt.Println("Usage : ", os.Args[0], " Decrypt encFilePath decFilePath keyPath")
+			fmt.Printf("Usage : %s Decrypt encFilePath decFilePath keyPath\n", os.Args[0])
 			os.Exit(1)
 		}
 
@@ -151,10 +196,31 @@ func main() {
 		fmt.Println("Creating VM manifest...")
 		if len(os.Args[1:]) < 5 {
 			fmt.Println("Invalid arguments")
-			fmt.Println("Usage : ", os.Args[0], " vmID hostHardwareUUID imageID imageEncrypted")
+			fmt.Printf("Usage : %s CreateVMManifest vmID hostHardwareUUID imageID imageEncrypted\n", os.Args[0])
 			os.Exit(1)
 		}
-		isEncryptionRequiredValue, _ := strconv.ParseBool(os.Args[5])
+
+		if err := validation.ValidateUUIDv4(os.Args[2]); err != nil {
+			fmt.Println("Invalid VM UUID format")
+			os.Exit(1)
+		}
+
+		if err = validation.ValidateHardwareUUID(os.Args[3]); err != nil {
+			fmt.Println("Invalid VM UUID format")
+			os.Exit(1)
+		}
+
+		if err = validation.ValidateUUIDv4(os.Args[4]); err != nil {
+			fmt.Println("Invalid image UUID format")
+			os.Exit(1)
+		}
+
+		isEncryptionRequiredValue, err := strconv.ParseBool(os.Args[5])
+		if err != nil {
+			fmt.Println("Invalid boolean value for EncryptionRequired")
+			os.Exit(1)
+		}
+
 		createdManifest, err := vml.CreateVMManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequiredValue)
 		var manifest instanceManifest
 		manifest.Manifest = createdManifest
@@ -171,28 +237,35 @@ func main() {
 	case "CreateContainerManifest":
 		fmt.Printf("Manifest creation method called")
 		if len(os.Args[1:]) < 6 {
-			fmt.Println("Usage :  os.Args[0] CreateContainerManifest containerID hostHardwareUUID imageID imageEncrypted imageIntegrityEnforced")
-                        os.Exit(1)
+			fmt.Printf("Usage :  %s CreateContainerManifest containerID hostHardwareUUID imageID imageEncrypted imageIntegrityEnforced\n", os.Args[0])
+			os.Exit(1)
 		}
+
+		inputArr := []string{os.Args[2], os.Args[3], os.Args[4]}
+		if validateInputErr := validation.ValidateStrings(inputArr); validateInputErr != nil {
+			fmt.Println("Invalid string format")
+			os.Exit(1)
+		}
+
 		isEncryptionRequired, err := strconv.ParseBool(os.Args[5])
 		if err != nil {
-			fmt.Println("Enter value (true/false) for imageEncrypted : " + err.Error())
-                        os.Exit(1)
+			fmt.Printf("Enter value (true/false) for imageEncrypted : %s\n", err.Error())
+			os.Exit(1)
 		}
 		isIntegrityEnforced, err := strconv.ParseBool(os.Args[6])
 		if err != nil {
-			fmt.Printf("Enter value (true/false) for imageIntegrityEnforced : " + err.Error())
-                        os.Exit(1)
+			fmt.Printf("Enter value (true/false) for imageIntegrityEnforced %s\n", err.Error())
+			os.Exit(1)
 		}
 		createdManifest, err := vml.CreateContainerManifest(os.Args[2], os.Args[3], os.Args[4], isEncryptionRequired, isIntegrityEnforced)
 		var manifest instanceManifest
 		manifest.Manifest = createdManifest
 		if err != nil {
-			fmt.Printf("Error creating the VM manifest: %s\n", err.Error())
+			fmt.Printf("Error creating the container manifest: %s\n", err.Error())
 			os.Exit(1)
 		}
 		if manifestOutput, err := serialize(manifest); err != nil {
-			fmt.Printf("Error serializing manifest output")
+			fmt.Printf("Error serializing manifest output\n")
 			os.Exit(1)
 		} else {
 			fmt.Println(manifestOutput)
