@@ -23,6 +23,13 @@ func main() {
 		fmt.Println("Usage : ", os.Args[0], "<methodname> <parameters>")
 		os.Exit(1)
 	}
+
+	inputValArr := []string{os.Args[0], os.Args[1]}
+	if valErr := validation.ValidateStrings(inputValArr); valErr != nil {
+		fmt.Println("Invalid string format")
+		os.Exit(1)
+	}
+
 	var methodName = os.Args[1]
 	var err error
 
