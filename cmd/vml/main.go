@@ -291,7 +291,6 @@ func main() {
 func serialize(manifest instanceManifest) (string, error) {
 	bytes, err := json.Marshal(manifest)
 	if err != nil {
-		log.Println("Can't serialize", err)
 		return "", err
 	}
 	return string(bytes), nil
