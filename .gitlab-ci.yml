@@ -1,0 +1,33 @@
+image: golang:1.11
+
+before_script:
+  - echo "Acquire::http::Proxy \"${HTTP_PROXY}\";" >> /etc/apt/apt.conf
+  - echo "Acquire::https::Proxy \"${HTTPS_PROXY}\";" >> /etc/apt/apt.conf
+  - git config --global http.proxy "${HTTP_PROXY}"
+  - git config --global http."https://${GITLAB_SERVER}".proxy ""
+  - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@${GITLAB_SERVER}".insteadOf "https://${GITLAB_SERVER}"
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - cd $CI_PROJECT_DIR
+
+variables:
+  HTTPS_PROXY: "${HTTPS_PROXY}"
+  no_proxy: "${NO_PROXY}"
+
+stages:
+  - build
+#   - test
+
+# test:
+#   stage: test
+#   tags:
+#     - go
+#   script:
+#     - go test -cover
+
+compile:
+  stage: build
+  tags:
+    - go
+  script:
+    - go build ./...
